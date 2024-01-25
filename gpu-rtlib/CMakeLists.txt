@@ -8,9 +8,8 @@ set(CMAKE_CXX_LINKER   "/opt/rocm/bin/hipcc")
 add_compile_options(-fgpu-rdc)
 
 set(BITCODE_NAME rtlib)
-# set(FILES RTlib.cpp)
 
-file(GLOB_RECURSE FILES "${CMAKE_SOURCE_DIR}/gpu-rtlib/*.cpp")
+file(GLOB_RECURSE FILES "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp")
 
 add_custom_command(OUTPUT ${BITCODE_NAME}.bc
     COMMAND ${CMAKE_CXX_COMPILER}
