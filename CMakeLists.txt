@@ -24,6 +24,10 @@ add_definitions(${LLVM_DEFINITIONS})
 include_directories(${LLVM_INCLUDE_DIRS})
 link_directories(${LLVM_LIBRARY_DIRS})
 
+# Use HIPCC.
+set(CMAKE_CXX_COMPILER "/opt/rocm/bin/hipcc")
+set(CMAKE_CXX_LINKER   "/opt/rocm/bin/hipcc")
+
 # Our pass lives in this subdirectory.
 add_subdirectory(instrument)
 add_subdirectory(gpu-rtlib)
