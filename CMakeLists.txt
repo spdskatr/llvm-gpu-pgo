@@ -4,9 +4,6 @@
 cmake_minimum_required(VERSION 3.6)
 project(LLVMGPUPGO)
 
-list(APPEND CMAKE_PREFIX_PATH /opt/rocm)
-find_package(hip REQUIRED)
-
 # LLVM uses C++17.
 set(CMAKE_CXX_STANDARD 17)
 
@@ -23,10 +20,6 @@ include(AddLLVM)
 add_definitions(${LLVM_DEFINITIONS})
 include_directories(${LLVM_INCLUDE_DIRS})
 link_directories(${LLVM_LIBRARY_DIRS})
-
-# Use HIPCC.
-set(CMAKE_CXX_COMPILER "/opt/rocm/bin/hipcc")
-set(CMAKE_CXX_LINKER   "/opt/rocm/bin/hipcc")
 
 # Our pass lives in this subdirectory.
 add_subdirectory(instrument)
