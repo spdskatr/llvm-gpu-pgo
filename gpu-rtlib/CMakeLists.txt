@@ -14,7 +14,7 @@ file(GLOB_RECURSE FILES "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp")
 set(BITCODE_NAME rtlib)
 add_custom_command(OUTPUT ${BITCODE_NAME}.bc
     COMMAND ${CMAKE_CXX_COMPILER}
-    ARGS ${FILES} -emit-llvm --cuda-device-only --offload-arch=gfx1100 -o ${BITCODE_NAME}.bc
+    ARGS ${FILES} -emit-llvm --cuda-device-only --offload-arch=gfx1100 -fgpu-rdc -o ${BITCODE_NAME}.bc
     DEPENDS ${FILES}
     COMMENT "Generating LLVM bitcode ${BITCODE_NAME}.bc"
     VERBATIM)
