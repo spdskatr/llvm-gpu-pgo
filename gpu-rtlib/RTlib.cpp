@@ -31,19 +31,23 @@ typedef struct {
     char *CountersLast;
 } InstrProfilingLoc;
 
-__device__ const void *getMinAddr(const void *A1, const void *A2) {
+static __device__ const void *getMinAddr(const void *A1, const void *A2) {
   return A1 < A2 ? A1 : A2;
 }
 
-__device__ const void *getMaxAddr(const void *A1, const void *A2) {
+static __device__ const void *getMaxAddr(const void *A1, const void *A2) {
   return A1 > A2 ? A1 : A2;
 }
 
 extern "C"
-__device__ InstrProfilingLoc Loc;
+__device__ InstrProfilingLoc Loc{};
+
 
 extern "C"
-__global__ void __llvm_profile_register_function(void *Data_) {
+__device__ void __llvm_profile_register_function(void *Data_) {
+    // We assume that counters are have size uint64
+    // (i.e. __llvm_profile_counter_entry_size() == sizeof(uint64_t))
+    // This is probably true for any future llvm version that rocm supports
     const __llvm_profile_data *Data = (__llvm_profile_data *)Data_;
     if (!Loc.DataFirst) {
         Loc.DataFirst = Data;
@@ -63,12 +67,16 @@ __global__ void __llvm_profile_register_function(void *Data_) {
         Loc.CountersLast,
         (uintptr_t)Data_ + (char *)Data->CounterPtr +
             Data->NumCounters * sizeof(uint64_t));
-
-    // We assume that counters are 64-bit (i.e. __llvm_profile_counter_entry_size() == sizeof(uint64_t))
 }
 
 extern "C"
-__global__ void __llvm_profile_register_names_function(void *s) {
-    //printf("registered names\n");
-
+__device__ void __llvm_profile_register_names_function(void *NamesStart, uint64_t NamesSize) {
+    if (!Loc.NamesFirst) {
+        Loc.NamesFirst = (const char *)NamesStart;
+        Loc.NamesLast = (const char *)NamesStart + NamesSize;
+        return;
+    }
+    Loc.NamesFirst = (const char *)getMinAddr(Loc.NamesFirst, NamesStart);
+    Loc.NamesLast =
+        (const char *)getMaxAddr(Loc.NamesLast, (const char *)NamesStart + NamesSize);
 }
