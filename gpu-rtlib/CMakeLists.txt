@@ -24,4 +24,4 @@ add_library(GPURTLib SHARED
     ${FILES}
 )
 
-# add_dependencies(GPURTLib RTBitCode)
+add_dependencies(GPURTLib RTBitCode)
