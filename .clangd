@@ -1,3 +1,0 @@
-CompileFlags:
-  Compiler: /opt/rocm/llvm/bin/clang++
-  Add: [-I/opt/rocm/llvm/include, -I/opt/rocm/include]
