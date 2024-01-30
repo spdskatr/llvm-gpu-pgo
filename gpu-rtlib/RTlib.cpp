@@ -42,6 +42,11 @@ static __device__ const void *getMaxAddr(const void *A1, const void *A2) {
 extern "C"
 __device__ InstrProfilingLoc Loc{};
 
+// TODO: We should also probably emit a reference to this variable on the host
+// side to get the linker to link the compiler-rt init module
+// See: llvm/ProfileData/InstrProf.h
+extern "C"
+__device__ int __llvm_profile_runtime = 0;
 
 extern "C"
 __device__ void __llvm_profile_register_function(void *Data_) {
