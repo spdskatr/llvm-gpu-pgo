@@ -14,10 +14,17 @@ namespace {
 struct GPUInstrPass : public PassInfoMixin<GPUInstrPass> {
     PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM) {
         if (M.getTargetTriple() == "amdgcn-amd-amdhsa") {
-            errs() << "Running PGO instrumentation on module " << M.getModuleIdentifier() << " targeting " << M.getTargetTriple() << "\n";
-            PGOInstrumentationGen g;
-            PreservedAnalyses pa1 = g.run(M, AM);
+            errs() << "Running PGO instrumentation on module " << M.getModuleIdentifier() 
+                << " with device target " << M.getTargetTriple() << "\n";
 
+            // Insert intrinsics
+            // NOTE: LLVM was modified to change bitcasts to addrspace casts
+            PGOInstrumentationGen g;
+            PreservedAnalyses pa = g.run(M, AM);
+
+            // Lower intrinsics
+            // NOTE: LLVM was modified to change bitcasts to addrspace casts
+            // and also not emit the profiler initialisation function
             InstrProfiling p{InstrProfOptions {
                 .NoRedZone = false,
                 .DoCounterPromotion = false,
@@ -25,20 +32,20 @@ struct GPUInstrPass : public PassInfoMixin<GPUInstrPass> {
                 .UseBFIInPromotion = false,
                 .InstrProfileOutput = "amdgpu.profraw"
             }};
-            PreservedAnalyses pa2 = p.run(M, AM);
-            //for (auto &F : M) {
-            //    errs() << "Ran PGOInstrumentationGen on " << F.getName() << "\n";
-            //}
+            pa.intersect(p.run(M, AM));
+
+            // Run verifier
             VerifierPass v;
-            PreservedAnalyses pa3 = v.run(M, AM);
-            pa3.intersect(pa2);
-            pa3.intersect(pa1);
+            pa.intersect(v.run(M, AM));
+
             errs() << "PGO instrumentation completed and verified!\n";
-            return pa3;
+            return pa;
+        } else {
+            // Otherwise, we assume host target
+            errs() << "Running PGO instrumentation on module " << M.getModuleIdentifier() << " with host target " << M.getTargetTriple() << "\n";
+
+            return PreservedAnalyses::all();
         }
-        
-        
-        return PreservedAnalyses::all();
     };
 };
 
