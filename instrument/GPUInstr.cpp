@@ -1,5 +1,6 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CallingConv.h"
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/Pass.h"
 #include "llvm/Passes/PassBuilder.h"
@@ -58,7 +59,8 @@ struct GPUInstrPass : public PassInfoMixin<GPUInstrPass> {
             pa.intersect(p.run(M, AM));
 
             // Run own pass
-            pa.intersect(instrumentDeviceCode(M, AM));
+            // Temporarily disabled.
+            //pa.intersect(instrumentDeviceCode(M, AM));
 
             // Run verifier
             VerifierPass v;
