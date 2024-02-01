@@ -26,6 +26,7 @@ struct GPUInstrPass : public PassInfoMixin<GPUInstrPass> {
                 IRB.CreateCall(InitFunction, {});
             }
         }
+        return PreservedAnalyses::all();
     }
 
     PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM) {
