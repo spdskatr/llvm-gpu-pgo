@@ -22,11 +22,14 @@ struct GPUInstrPass : public PassInfoMixin<GPUInstrPass> {
         for (Function& F : M) {
             if (F.getCallingConv() == CallingConv::AMDGPU_KERNEL) {
                 // Instrument each kernel with call to initialisation...
-                // Insert before last instruction.
                 // TODO: Make this idempotent
-                Instruction& e = *F.getEntryBlock().end();
-                IRBuilder<> IRB{&e};
-                IRB.CreateCall(InitFunction, {});
+                for (Instruction& I : F.getEntryBlock()) {
+                    if (I.isTerminator()) {
+                        IRBuilder<> IRB{&I};
+                        IRB.CreateCall(InitFunction, {});
+                        break;
+                    }
+                }
             }
         }
         return PreservedAnalyses::all();
