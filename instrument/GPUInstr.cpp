@@ -1,12 +1,9 @@
 #include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/CallingConv.h"
 #include "llvm/IR/GlobalValue.h"
-#include "llvm/IR/IRBuilder.h"
 #include "llvm/Pass.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Passes/PassPlugin.h"
 #include "llvm/ProfileData/InstrProf.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Instrumentation/PGOInstrumentation.h"
 #include "llvm/Transforms/Instrumentation/InstrProfiling.h"
@@ -18,21 +15,7 @@ using namespace llvm;
 namespace {
 
 struct GPUInstrPass : public PassInfoMixin<GPUInstrPass> {
-    PreservedAnalyses instrumentDeviceCode(Module &M, ModuleAnalysisManager &AM) {
-        Function *InitFunction = M.getFunction(getInstrProfRegFuncsName());
-        for (Function& F : M) {
-            if (F.getCallingConv() == CallingConv::AMDGPU_KERNEL) {
-                // Instrument each kernel with call to initialisation...
-                // TODO: Make this idempotent
-                for (Instruction& I : F.getEntryBlock()) {
-                    if (I.isTerminator()) {
-                        IRBuilder<> IRB{&I};
-                        IRB.CreateCall(InitFunction, {});
-                        break;
-                    }
-                }
-            }
-        }
+    PreservedAnalyses instrumentHostCode(Module &M, ModuleAnalysisManager &AM) {
         return PreservedAnalyses::all();
     }
 
@@ -58,10 +41,6 @@ struct GPUInstrPass : public PassInfoMixin<GPUInstrPass> {
             }};
             pa.intersect(p.run(M, AM));
 
-            // Run own pass
-            // Temporarily disabled.
-            //pa.intersect(instrumentDeviceCode(M, AM));
-
             // Run verifier
             VerifierPass v;
             pa.intersect(v.run(M, AM));
@@ -72,7 +51,7 @@ struct GPUInstrPass : public PassInfoMixin<GPUInstrPass> {
             // Otherwise, we assume host target
             errs() << "Running PGO instrumentation on module " << M.getModuleIdentifier() << " with host target " << M.getTargetTriple() << "\n";
 
-            return PreservedAnalyses::all();
+            return instrumentHostCode(M, AM);
         }
     };
 };
