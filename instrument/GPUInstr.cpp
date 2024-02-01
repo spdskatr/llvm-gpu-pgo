@@ -24,6 +24,7 @@ struct GPUInstrPass : public PassInfoMixin<GPUInstrPass> {
                 IRBuilder<> IRB{BasicBlock::Create(
                     M.getContext(), "", &F, &F.getEntryBlock())};
                 IRB.CreateCall(InitFunction, {});
+                IRB.CreateBr(&F.getEntryBlock());
             }
         }
         return PreservedAnalyses::all();
