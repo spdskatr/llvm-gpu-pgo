@@ -1,9 +1,11 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CallingConv.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/Pass.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Passes/PassPlugin.h"
 #include "llvm/ProfileData/InstrProf.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Instrumentation/PGOInstrumentation.h"
 #include "llvm/Transforms/Instrumentation/InstrProfiling.h"
@@ -21,10 +23,11 @@ struct GPUInstrPass : public PassInfoMixin<GPUInstrPass> {
             if (F.getCallingConv() == CallingConv::AMDGPU_KERNEL) {
                 // Instrument each kernel with call to initialisation...
                 // TODO: Make this idempotent
-                IRBuilder<> IRB{BasicBlock::Create(
-                    M.getContext(), "", &F, &F.getEntryBlock())};
-                IRB.CreateCall(InitFunction, {});
-                IRB.CreateBr(&F.getEntryBlock());
+                for (Instruction& I : F.getEntryBlock()) {
+                    IRBuilder<> IRB{&I};
+                    IRB.CreateCall(InitFunction, {});
+                    break;
+                }
             }
         }
         return PreservedAnalyses::all();
