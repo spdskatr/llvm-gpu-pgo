@@ -1,6 +1,9 @@
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/CallingConv.h"
 #include "llvm/Pass.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Passes/PassPlugin.h"
+#include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Instrumentation/PGOInstrumentation.h"
 #include "llvm/Transforms/Instrumentation/InstrProfiling.h"
@@ -12,6 +15,19 @@ using namespace llvm;
 namespace {
 
 struct GPUInstrPass : public PassInfoMixin<GPUInstrPass> {
+    PreservedAnalyses instrumentDeviceCode(Module &M, ModuleAnalysisManager &AM) {
+        Function *InitFunction = M.getFunction(getInstrProfRegFuncsName());
+        for (Function& F : M) {
+            if (F.getCallingConv() == CallingConv::AMDGPU_KERNEL) {
+                // Instrument each kernel with call to initialisation...
+                // TODO: Make this idempotent
+                IRBuilder<> IRB{BasicBlock::Create(
+                    M.getContext(), "", &F, &F.getEntryBlock())};
+                IRB.CreateCall(InitFunction, {});
+            }
+        }
+    }
+
     PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM) {
         if (M.getTargetTriple() == "amdgcn-amd-amdhsa") {
             errs() << "Running PGO instrumentation on module " << M.getModuleIdentifier() 
@@ -33,6 +49,9 @@ struct GPUInstrPass : public PassInfoMixin<GPUInstrPass> {
                 .InstrProfileOutput = "amdgpu.profraw"
             }};
             pa.intersect(p.run(M, AM));
+
+            // Run own pass
+            pa.intersect(instrumentDeviceCode(M, AM));
 
             // Run verifier
             VerifierPass v;
