@@ -1,4 +1,7 @@
-#include <stdint.h>
+typedef unsigned long long uint64_t;
+typedef unsigned uint32_t;
+typedef unsigned short uint16_t;
+
 // Much of this code is made to be as close as possible to the code in
 // compiler-rt/lib/profile/InstrProfilingPlatformOther.c
 enum ValueKind {
