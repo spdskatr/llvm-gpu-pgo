@@ -1,3 +1,4 @@
+#include <stdint.h>
 // Much of this code is made to be as close as possible to the code in
 // compiler-rt/lib/profile/InstrProfilingPlatformOther.c
 enum ValueKind {
