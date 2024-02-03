@@ -21,7 +21,7 @@ static __device__ const void *getMaxAddr(const void *A1, const void *A2) {
 __device__ ProfDataLocs Locs{};
 
 extern "C"
-__device__ ProfDataLocs *__llvm_gpuprof_loc;
+__device__ ProfDataLocs *__llvm_gpuprof_loc = nullptr;
 
 // TODO: We should also probably emit a reference to this variable on the host
 // side to get the linker to link the compiler-rt init module
