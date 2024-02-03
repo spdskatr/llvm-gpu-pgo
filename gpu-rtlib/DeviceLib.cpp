@@ -6,30 +6,9 @@
 #include "hip/hip_runtime_api.h"
 #include "hip/hip_runtime.h"
 #include "hip/driver_types.h"
+#include "RTLib.h"
 
 #define HIP_ASSERT(x) (assert((x)==hipSuccess))
-
-// Much of this code is made to be as close as possible to the code in
-// compiler-rt/lib/profile/InstrProfilingPlatformOther.c
-enum ValueKind {
-#define VALUE_PROF_KIND(Enumerator, Value, Descr) Enumerator = Value,
-#include "profile/InstrProfData.inc"
-};
-
-typedef void *IntPtrT;
-typedef struct __llvm_profile_data {
-#define INSTR_PROF_DATA(Type, LLVMType, Name, Initializer) Type Name;
-#include "profile/InstrProfData.inc"
-} __llvm_profile_data;
-
-typedef struct {
-    const __llvm_profile_data *DataFirst;
-    const __llvm_profile_data *DataLast;
-    const char *NamesFirst;
-    const char *NamesLast;
-    char *CountersFirst;
-    char *CountersLast;
-} ProfDataLocs;
 
 static __device__ const void *getMinAddr(const void *A1, const void *A2) {
   return A1 < A2 ? A1 : A2;
