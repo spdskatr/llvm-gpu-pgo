@@ -40,6 +40,7 @@ struct GPUInstrPass : public PassInfoMixin<GPUInstrPass> {
         auto *LocVar = new GlobalVariable(
             M, PtrTy, false, llvm::GlobalValue::ExternalLinkage, 
             nullptr, GPUPROF_LOC_NAME);
+        LocVar->setExternallyInitialized(true);
 
         // The first argument of __hipRegisterVar stores the GPUBinaryHandle.
         // See: clang/lib/CodeGen/CGCUDANV.cpp
