@@ -1,5 +1,4 @@
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -11,7 +10,6 @@
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Passes/PassPlugin.h"
 #include "llvm/ProfileData/InstrProf.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Instrumentation/PGOInstrumentation.h"
 #include "llvm/Transforms/Instrumentation/InstrProfiling.h"
@@ -39,9 +37,8 @@ struct GPUInstrPass : public PassInfoMixin<GPUInstrPass> {
 
         // Add global shadow variable for the loc name
         auto *LocNameVar = IRB.CreateGlobalString(GPUPROF_LOC_NAME);
-        // TODO: Possibly change this to external linkage?
         auto *LocVar = new GlobalVariable(
-            M, PtrTy, false, llvm::GlobalValue::WeakAnyLinkage, 
+            M, PtrTy, false, llvm::GlobalValue::ExternalLinkage, 
             nullptr, GPUPROF_LOC_NAME);
 
         // The first argument of __hipRegisterVar stores the GPUBinaryHandle.
