@@ -29,7 +29,7 @@ typedef struct {
     const char *NamesLast;
     char *CountersFirst;
     char *CountersLast;
-} InstrProfilingLoc;
+} ProfDataLocs;
 
 static __device__ const void *getMinAddr(const void *A1, const void *A2) {
   return A1 < A2 ? A1 : A2;
@@ -39,8 +39,10 @@ static __device__ const void *getMaxAddr(const void *A1, const void *A2) {
   return A1 > A2 ? A1 : A2;
 }
 
+__device__ ProfDataLocs Locs{};
+
 extern "C"
-__device__ InstrProfilingLoc Loc{};
+__device__ ProfDataLocs *__llvm_gpuprof_loc;
 
 // TODO: We should also probably emit a reference to this variable on the host
 // side to get the linker to link the compiler-rt init module
@@ -54,34 +56,35 @@ __device__ void __llvm_profile_register_function(void *Data_) {
     // (i.e. __llvm_profile_counter_entry_size() == sizeof(uint64_t))
     // This is probably true for any future llvm version that rocm supports
     const __llvm_profile_data *Data = (__llvm_profile_data *)Data_;
-    if (!Loc.DataFirst) {
-        Loc.DataFirst = Data;
-        Loc.DataLast = Data + 1;
-        Loc.CountersFirst = (uintptr_t)Data_ + (char *)Data->CounterPtr;
-        Loc.CountersLast =
-            Loc.CountersFirst + Data->NumCounters * sizeof(uint64_t);
+    if (!Locs.DataFirst) {
+        Locs.DataFirst = Data;
+        Locs.DataLast = Data + 1;
+        Locs.CountersFirst = (uintptr_t)Data_ + (char *)Data->CounterPtr;
+        Locs.CountersLast =
+            Locs.CountersFirst + Data->NumCounters * sizeof(uint64_t);
         return;
     }
 
-    Loc.DataFirst = (const __llvm_profile_data *)getMinAddr(Loc.DataFirst, Data);
-    Loc.CountersFirst = (char *)getMinAddr(
-        Loc.CountersFirst, (uintptr_t)Data_ + (char *)Data->CounterPtr);
+    Locs.DataFirst = (const __llvm_profile_data *)getMinAddr(Locs.DataFirst, Data);
+    Locs.CountersFirst = (char *)getMinAddr(
+        Locs.CountersFirst, (uintptr_t)Data_ + (char *)Data->CounterPtr);
 
-    Loc.DataLast = (const __llvm_profile_data *)getMaxAddr(Loc.DataLast, Data + 1);
-    Loc.CountersLast = (char *)getMaxAddr(
-        Loc.CountersLast,
+    Locs.DataLast = (const __llvm_profile_data *)getMaxAddr(Locs.DataLast, Data + 1);
+    Locs.CountersLast = (char *)getMaxAddr(
+        Locs.CountersLast,
         (uintptr_t)Data_ + (char *)Data->CounterPtr +
             Data->NumCounters * sizeof(uint64_t));
 }
 
 extern "C"
 __device__ void __llvm_profile_register_names_function(void *NamesStart, uint64_t NamesSize) {
-    if (!Loc.NamesFirst) {
-        Loc.NamesFirst = (const char *)NamesStart;
-        Loc.NamesLast = (const char *)NamesStart + NamesSize;
+    __llvm_gpuprof_loc = &Locs;
+    if (!Locs.NamesFirst) {
+        Locs.NamesFirst = (const char *)NamesStart;
+        Locs.NamesLast = (const char *)NamesStart + NamesSize;
         return;
     }
-    Loc.NamesFirst = (const char *)getMinAddr(Loc.NamesFirst, NamesStart);
-    Loc.NamesLast =
-        (const char *)getMaxAddr(Loc.NamesLast, (const char *)NamesStart + NamesSize);
+    Locs.NamesFirst = (const char *)getMinAddr(Locs.NamesFirst, NamesStart);
+    Locs.NamesLast =
+        (const char *)getMaxAddr(Locs.NamesLast, (const char *)NamesStart + NamesSize);
 }
