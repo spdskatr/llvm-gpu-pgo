@@ -20,7 +20,7 @@ static __device__ const void *getMaxAddr(const void *A1, const void *A2) {
 
 __device__ ProfDataLocs Locs{};
 
-__device__ ProfDataLocs *__llvm_gpuprof_loc = nullptr;
+__device__ ProfDataLocs *__llvm_gpuprof_loc = &Locs;
 
 // TODO: We should also probably emit a reference to this variable on the host
 // side to get the linker to link the compiler-rt init module
@@ -55,7 +55,6 @@ __device__ void __llvm_profile_register_function(void *Data_) {
 
 extern "C"
 __device__ void __llvm_profile_register_names_function(void *NamesStart, uint64_t NamesSize) {
-    __llvm_gpuprof_loc = &Locs;
     if (!Locs.NamesFirst) {
         Locs.NamesFirst = (const char *)NamesStart;
         Locs.NamesLast = (const char *)NamesStart + NamesSize;

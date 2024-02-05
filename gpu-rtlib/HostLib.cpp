@@ -12,16 +12,25 @@ ProfDataLocs *__llvm_gpuprof_loc = init_loc();
 
 void dump_res(ProfDataLocs& res) {
     printf("DataFirst: %p\n", res.DataFirst);
+    printf("DataLast: %p\n", res.DataLast);
+    printf("NamesFirst: %p\n", res.NamesFirst);
+    printf("NamesLast: %p\n", res.NamesLast);
+    printf("CountersFirst: %p\n", res.CountersFirst);
+    printf("CountersLast: %p\n", res.CountersLast);
 }
 
 extern "C"
 void __llvm_gpuprof_sync(void) {
     HIP_ASSERT(hipDeviceSynchronize());
-    ProfDataLocs *res = (ProfDataLocs *)malloc(sizeof(ProfDataLocs));
-    HIP_ASSERT(hipMemcpyFromSymbol(res, __llvm_gpuprof_loc,
+    ProfDataLocs *deviceLoc = nullptr;
+
+    HIP_ASSERT(hipMemcpyFromSymbol(&deviceLoc, __llvm_gpuprof_loc,
         sizeof(ProfDataLocs *), 0, hipMemcpyDeviceToHost));
-    dump_res(*res);
-    free(res);
+    printf("deviceLoc: %p\n", deviceLoc);
+    
+    ProfDataLocs hostLoc = {};
+    HIP_ASSERT(hipMemcpy(&hostLoc, deviceLoc, sizeof(ProfDataLocs), hipMemcpyDeviceToHost));
+    dump_res(hostLoc);
 }
 
 ProfDataLocs *init_loc(void) {

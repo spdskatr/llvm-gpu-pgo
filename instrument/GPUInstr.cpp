@@ -73,7 +73,7 @@ struct GPUInstrPass : public PassInfoMixin<GPUInstrPass> {
                             FunctionType *FT = FunctionType::get(IRB.getVoidTy(), false);
                             Function *F = Function::Create(FT, llvm::GlobalValue::ExternalLinkage, 0u, GPUPROF_SYNC_NAME, &M);
                             IRB.CreateCall(F, {});
-                            errs() << "Inserted a call within function " << F << "\n";
+                            errs() << "Inserted a call for kernel call " << C->getArgOperand(0)->getName() << "\n";
                         }
                     }
                 }
