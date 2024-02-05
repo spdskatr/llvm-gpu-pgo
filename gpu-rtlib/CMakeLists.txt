@@ -1,6 +1,9 @@
 list(APPEND CMAKE_PREFIX_PATH /opt/rocm)
 find_package(hip REQUIRED)
 
+# It's fine that this doesn't use a patched version of llvm
+set(CMAKE_CXX_COMPILER "/opt/rocm/llvm/bin/clang++")
+
 # This is so we can find that singular file InstrProfData.inc that we need
 include_directories("/opt/rocm/llvm/lib/clang/17.0.0/include")
 
