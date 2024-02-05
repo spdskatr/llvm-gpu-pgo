@@ -15,18 +15,23 @@
 #include "llvm/Transforms/Instrumentation/InstrProfiling.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Verifier.h"
+#include <llvm/Support/Casting.h>
 
 #define HIP_REGISTER_VAR_NAME "__hipRegisterVar"
 #define HIP_REGISTER_GLOBALS_NAME "__hip_register_globals"
 #define GPUPROF_LOC_NAME "__llvm_gpuprof_loc"
-#define PROFDATALOCS_SIZE (6 * sizeof(void *))
+#define HIP_LAUNCH_KERNEL_NAME "hipLaunchKernel"
+#define GPUPROF_SYNC_NAME "__llvm_gpuprof_sync"
 
 using namespace llvm;
 
 namespace {
 
 struct GPUInstrPass : public PassInfoMixin<GPUInstrPass> {
-    PreservedAnalyses instrumentHostCode(Module &M, ModuleAnalysisManager &AM) {
+    // Insert code within __hip_register_globals:
+    // __hipRegisterVar(<handle>, __llvm_gpuprof_loc, "__llvm_gpuprof_loc", 
+    //                  "__llvm_gpuprof_loc", 1, 8, 0, 0)
+    void insertRegisterVar(Module &M) {
         auto *RegisterVarF = M.getFunction(HIP_REGISTER_VAR_NAME);
         auto *RegisterGlobalsF = M.getFunction(HIP_REGISTER_GLOBALS_NAME);
 
@@ -55,6 +60,30 @@ struct GPUInstrPass : public PassInfoMixin<GPUInstrPass> {
             ConstantInt::get(IntTy, 0),
             ConstantInt::get(IntTy, 0) }};
         IRB.CreateCall(RegisterVarF, args);
+    }
+
+    void insertGPUProfDump(Module &M) {
+        for (Function &F : M) {
+            for (BasicBlock &B : F) {
+                for (Instruction &I : B) {
+                    if (CallInst *C = dyn_cast<CallInst>(&I)) {
+                        Function *Callee = C->getCalledFunction();
+                        if (Callee && Callee->getName() == HIP_LAUNCH_KERNEL_NAME) {
+                            IRBuilder IRB{C->getInsertionPointAfterDef()};
+                            FunctionType *FT = FunctionType::get(IRB.getVoidTy(), false);
+                            Function *F = Function::Create(FT, llvm::GlobalValue::ExternalLinkage, 0u, GPUPROF_SYNC_NAME, &M);
+                            IRB.CreateCall(F, {});
+                            errs() << "Inserted a call within function " << F << "\n";
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    PreservedAnalyses instrumentHostCode(Module &M, ModuleAnalysisManager &AM) {
+        insertRegisterVar(M);
+        insertGPUProfDump(M);
         return PreservedAnalyses::all();
     }
 

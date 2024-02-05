@@ -2,10 +2,8 @@ list(APPEND CMAKE_PREFIX_PATH /opt/rocm)
 find_package(hip REQUIRED)
 
 # It's fine that this doesn't use a patched version of llvm
-set(CMAKE_CXX_COMPILER "/opt/rocm/llvm/bin/clang++")
-
-# This is so we can find that singular file InstrProfData.inc that we need
-include_directories("/opt/rocm/llvm/lib/clang/17.0.0/include")
+set(CMAKE_CXX_COMPILER "/opt/rocm/bin/hipcc")
+add_compile_options(--cuda-host-only -fPIC)
 
 # CMake for generating bitcode files fails when multiple targets exist
 # --offload-arch doesn't matter, the LLVM IR generated is the same for this project
