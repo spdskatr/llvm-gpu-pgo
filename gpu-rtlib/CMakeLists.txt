@@ -1,7 +1,7 @@
 list(APPEND CMAKE_PREFIX_PATH /opt/rocm)
 find_package(hip REQUIRED)
 
-# This is so we can find that singular file InstrProfData.h that we need
+# This is so we can find that singular file InstrProfData.inc that we need
 include_directories("/opt/rocm/llvm/lib/clang/17.0.0/include")
 
 # CMake for generating bitcode files fails when multiple targets exist
