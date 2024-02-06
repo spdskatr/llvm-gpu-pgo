@@ -3,7 +3,7 @@ find_package(hip REQUIRED)
 
 # It's fine that this doesn't use a patched version of llvm
 set(CMAKE_CXX_COMPILER "/opt/rocm/bin/hipcc")
-add_compile_options(--cuda-host-only -fPIC)
+add_compile_options(--cuda-host-only -fPIC -g)
 
 # CMake for generating bitcode files fails when multiple targets exist
 # --offload-arch doesn't matter, the LLVM IR generated is the same for this project
