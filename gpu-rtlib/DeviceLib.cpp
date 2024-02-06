@@ -18,12 +18,7 @@ static __device__ const void *getMaxAddr(const void *A1, const void *A2) {
   return A1 > A2 ? A1 : A2;
 }
 
-__device__ ProfDataLocs __llvm_gpuprof_loc[1] = {{ nullptr, nullptr, nullptr, nullptr, nullptr, nullptr }};
-
-// TODO: We should also probably emit a reference to this variable on the host
-// side to get the linker to link the compiler-rt init module
-// See: llvm/ProfileData/InstrProf.h
-__device__ int __llvm_profile_runtime = 0;
+__device__ ProfDataLocs __llvm_gpuprof_loc[1];
 
 extern "C"
 __device__ void __llvm_profile_register_function(void *Data_) {

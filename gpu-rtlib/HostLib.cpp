@@ -30,10 +30,6 @@ void dump_res(ProfDataLocs& res) {
     printf("CountersLast: %p\n", res.CountersLast);
     size_t countersSize = (res.CountersLast - res.CountersFirst) * sizeof(char);
     char *counters = (char *)malloc(countersSize);
-    if (!counters) {
-        fprintf(stderr, "wtf!!!\n");
-        return;
-    }
 
     memcpyArbitraryDeviceToHost(counters, res.CountersFirst, countersSize);
 
