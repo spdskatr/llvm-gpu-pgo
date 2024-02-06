@@ -22,14 +22,10 @@ void dump_res(ProfDataLocs& res) {
 extern "C"
 void __llvm_gpuprof_sync(void) {
     HIP_ASSERT(hipDeviceSynchronize());
-    ProfDataLocs *deviceLoc = nullptr;
-
-    HIP_ASSERT(hipMemcpyFromSymbol(&deviceLoc, __llvm_gpuprof_loc,
-        sizeof(ProfDataLocs *), 0, hipMemcpyDeviceToHost));
-    printf("deviceLoc: %p\n", deviceLoc);
-    
     ProfDataLocs hostLoc = {};
-    HIP_ASSERT(hipMemcpy(&hostLoc, deviceLoc, sizeof(ProfDataLocs), hipMemcpyDeviceToHost));
+
+    HIP_ASSERT(hipMemcpyFromSymbol(&hostLoc, __llvm_gpuprof_loc,
+        sizeof(ProfDataLocs), 0, hipMemcpyDeviceToHost));
     dump_res(hostLoc);
 }
 
