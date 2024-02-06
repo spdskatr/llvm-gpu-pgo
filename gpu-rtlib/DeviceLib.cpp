@@ -18,7 +18,7 @@ static __device__ const void *getMaxAddr(const void *A1, const void *A2) {
   return A1 > A2 ? A1 : A2;
 }
 
-__device__ ProfDataLocs __llvm_gpuprof_loc[1];
+__device__ ProfDataLocs __llvm_gpuprof_loc[1] = {{ nullptr, nullptr, nullptr, nullptr, nullptr, nullptr }};
 
 // TODO: We should also probably emit a reference to this variable on the host
 // side to get the linker to link the compiler-rt init module
@@ -34,21 +34,20 @@ __device__ void __llvm_profile_register_function(void *Data_) {
     if (!__llvm_gpuprof_loc[0].DataFirst) {
         __llvm_gpuprof_loc[0].DataFirst = Data;
         __llvm_gpuprof_loc[0].DataLast = Data + 1;
-        __llvm_gpuprof_loc[0].CountersFirst = (uintptr_t)Data_ + (char *)Data->CounterPtr;
+        __llvm_gpuprof_loc[0].CountersFirst = (char *)((size_t)Data_ + (size_t)Data->CounterPtr);
         __llvm_gpuprof_loc[0].CountersLast =
             __llvm_gpuprof_loc[0].CountersFirst + Data->NumCounters * sizeof(uint64_t);
-        return;
+    } else {
+        __llvm_gpuprof_loc[0].DataFirst = (const __llvm_profile_data *)getMinAddr(__llvm_gpuprof_loc[0].DataFirst, Data);
+        __llvm_gpuprof_loc[0].CountersFirst = (char *)getMinAddr(
+            __llvm_gpuprof_loc[0].CountersFirst, (char *)((size_t)Data_ + (size_t)Data->CounterPtr));
+
+        __llvm_gpuprof_loc[0].DataLast = (const __llvm_profile_data *)getMaxAddr(__llvm_gpuprof_loc[0].DataLast, Data + 1);
+        __llvm_gpuprof_loc[0].CountersLast = (char *)getMaxAddr(
+            __llvm_gpuprof_loc[0].CountersLast,
+            (char *)((size_t)Data_ + (size_t)Data->CounterPtr +
+                Data->NumCounters * sizeof(uint64_t)));
     }
-
-    __llvm_gpuprof_loc[0].DataFirst = (const __llvm_profile_data *)getMinAddr(__llvm_gpuprof_loc[0].DataFirst, Data);
-    __llvm_gpuprof_loc[0].CountersFirst = (char *)getMinAddr(
-        __llvm_gpuprof_loc[0].CountersFirst, (uintptr_t)Data_ + (char *)Data->CounterPtr);
-
-    __llvm_gpuprof_loc[0].DataLast = (const __llvm_profile_data *)getMaxAddr(__llvm_gpuprof_loc[0].DataLast, Data + 1);
-    __llvm_gpuprof_loc[0].CountersLast = (char *)getMaxAddr(
-        __llvm_gpuprof_loc[0].CountersLast,
-        (uintptr_t)Data_ + (char *)Data->CounterPtr +
-            Data->NumCounters * sizeof(uint64_t));
 }
 
 extern "C"

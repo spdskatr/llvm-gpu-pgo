@@ -87,11 +87,26 @@ struct GPUInstrPass : public PassInfoMixin<GPUInstrPass> {
         return PreservedAnalyses::all();
     }
 
+    void createGPURuntimeHook(Module &M) {
+        auto *Int32Ty = Type::getInt32Ty(M.getContext());
+        auto *Var = new GlobalVariable(M, Int32Ty, false,
+             GlobalValue::ExternalLinkage, nullptr, getInstrProfRuntimeHookVarName());
+        Var->setVisibility(GlobalValue::HiddenVisibility);
+    }
+
     PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM) {
         PreservedAnalyses pa = PreservedAnalyses::all();
         if (M.getTargetTriple() == "amdgcn-amd-amdhsa") {
             errs() << "Running PGO instrumentation on module " << M.getModuleIdentifier() 
                 << " with device target " << M.getTargetTriple() << "\n";
+
+            // Create a runtime hook variable so it doesn't inadvertently end
+            // up being called by __llvm_profile_register_function. This is a
+            // bit stupid.
+            // We don't care if this variable is stripped out. This is just to
+            // disable a bug in LLVM 17.
+            // See: InstrProfiling::emitRegistration()
+            createGPURuntimeHook(M);
 
             // Insert intrinsics
             // NOTE: LLVM was modified to change bitcasts to addrspace casts

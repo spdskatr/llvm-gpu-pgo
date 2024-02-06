@@ -17,6 +17,25 @@ void dump_res(ProfDataLocs& res) {
     printf("NamesLast: %p\n", res.NamesLast);
     printf("CountersFirst: %p\n", res.CountersFirst);
     printf("CountersLast: %p\n", res.CountersLast);
+    size_t dataSize = (res.DataLast - res.DataFirst) * sizeof(__llvm_profile_data);
+    char *counters = (char *)malloc(dataSize);
+    if (!counters) {
+        fprintf(stderr, "wtf!!!\n");
+        return;
+    }
+
+    hipError_t err = hipMemcpy(counters, res.DataFirst, dataSize, hipMemcpyDeviceToHost);
+    if (err != hipSuccess) {
+        puts(hipGetErrorName(err));
+    } else {
+        printf("Data:");
+        for (size_t i = 0; i < dataSize; i++) {
+            printf(" %02x", (unsigned char)counters[i]);
+        }
+        printf("\n");
+    }
+    free(counters);
+    
 }
 
 extern "C"
