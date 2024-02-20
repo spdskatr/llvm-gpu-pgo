@@ -5,7 +5,7 @@
 #include "hip/hip_runtime_api.h"
 #include "RTLib.h"
 
-#define HostLoc __llvm_prof_override_locs
+#define HostLoc __llvm_prf_override_locs
 
 #define HIP_ASSERT(x) (assert((x)==hipSuccess))
 ProfDataLocs *init_loc(void);
