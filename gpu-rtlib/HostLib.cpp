@@ -87,7 +87,10 @@ void __llvm_gpuprof_sync(void) {
     if (!DeviceLoc.DataFirst)
         fetchLocs();
     fetchData();
+    printf("Device loc:\n");
     dumpRes(DeviceLoc);
+    printf("Host loc:\n");
+    dumpRes(HostLoc);
     printf("counters:");
     for (char *c = HostLoc.CountersFirst; c < HostLoc.CountersLast; c++) {
         printf(" %02x", (unsigned char)*c);
