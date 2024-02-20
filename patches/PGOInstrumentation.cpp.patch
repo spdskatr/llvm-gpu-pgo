@@ -1,0 +1,29 @@
+--- PGOInstrumentation.cpp.original	2024-01-31 22:19:09.251076300 +0000
++++ llvm17/llvm-project-llvmorg-17.0.0/llvm/lib/Transforms/Instrumentation/PGOInstrumentation.cpp	2024-01-31 22:20:55.851784673 +0000
+@@ -875,7 +875,7 @@
+       PGOBlockCoverage);
+ 
+   Type *I8PtrTy = Type::getInt8PtrTy(M->getContext());
+-  auto Name = ConstantExpr::getBitCast(FuncInfo.FuncNameVar, I8PtrTy);
++  auto Name = ConstantExpr::getAddrSpaceCast(FuncInfo.FuncNameVar, I8PtrTy);
+   auto CFGHash = ConstantInt::get(Type::getInt64Ty(M->getContext()),
+                                   FuncInfo.FunctionHash);
+   if (PGOFunctionEntryCoverage) {
+@@ -964,7 +964,7 @@
+       populateEHOperandBundle(Cand, BlockColors, OpBundles);
+       Builder.CreateCall(
+           Intrinsic::getDeclaration(M, Intrinsic::instrprof_value_profile),
+-          {ConstantExpr::getBitCast(FuncInfo.FuncNameVar, I8PtrTy),
++          {ConstantExpr::getAddrSpaceCast(FuncInfo.FuncNameVar, I8PtrTy),
+            Builder.getInt64(FuncInfo.FunctionHash), ToProfile,
+            Builder.getInt32(Kind), Builder.getInt32(SiteIndex++)},
+           OpBundles);
+@@ -1651,7 +1651,7 @@
+   auto *Step = Builder.CreateZExt(SI.getCondition(), Int64Ty);
+   Builder.CreateCall(
+       Intrinsic::getDeclaration(M, Intrinsic::instrprof_increment_step),
+-      {ConstantExpr::getBitCast(FuncNameVar, I8PtrTy),
++      {ConstantExpr::getAddrSpaceCast(FuncNameVar, I8PtrTy),
+        Builder.getInt64(FuncHash), Builder.getInt32(TotalNumCtrs),
+        Builder.getInt32(*CurCtrIdx), Step});
+   ++(*CurCtrIdx);

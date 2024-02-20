@@ -1,0 +1,24 @@
+--- InstrProfiling.cpp.original	2024-01-31 22:17:21.220313481 +0000
++++ llvm17/llvm-project-llvmorg-17.0.0/llvm/lib/Transforms/Instrumentation/InstrProfiling.cpp	2024-02-01 17:02:19.737272993 +0000
+@@ -1265,10 +1265,10 @@
+   IRBuilder<> IRB(BasicBlock::Create(M->getContext(), "", RegisterF));
+   for (Value *Data : CompilerUsedVars)
+     if (!isa<Function>(Data))
+-      IRB.CreateCall(RuntimeRegisterF, IRB.CreateBitCast(Data, VoidPtrTy));
++      IRB.CreateCall(RuntimeRegisterF, IRB.CreatePointerCast(Data, VoidPtrTy));
+   for (Value *Data : UsedVars)
+     if (Data != NamesVar && !isa<Function>(Data))
+-      IRB.CreateCall(RuntimeRegisterF, IRB.CreateBitCast(Data, VoidPtrTy));
++      IRB.CreateCall(RuntimeRegisterF, IRB.CreatePointerCast(Data, VoidPtrTy));
+ 
+   if (NamesVar) {
+     Type *ParamTypes[] = {VoidPtrTy, Int64Ty};
+@@ -1277,7 +1277,7 @@
+     auto *NamesRegisterF =
+         Function::Create(NamesRegisterTy, GlobalVariable::ExternalLinkage,
+                          getInstrProfNamesRegFuncName(), M);
+-    IRB.CreateCall(NamesRegisterF, {IRB.CreateBitCast(NamesVar, VoidPtrTy),
++    IRB.CreateCall(NamesRegisterF, {IRB.CreatePointerCast(NamesVar, VoidPtrTy),
+                                     IRB.getInt64(NamesSize)});
+   }
+ 

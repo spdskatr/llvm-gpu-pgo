@@ -1,0 +1,60 @@
+--- InstrProfilingPlatformLinux.c.original	2024-02-20 22:37:22.211989358 +0000
++++ llvm17/llvm-project-llvmorg-17.0.0/compiler-rt/lib/profile/InstrProfilingPlatformLinux.c	2024-02-20 20:39:39.882987930 +0000
+@@ -54,24 +54,57 @@
+ extern ValueProfNode PROF_VNODES_START COMPILER_RT_VISIBILITY COMPILER_RT_WEAK;
+ extern ValueProfNode PROF_VNODES_STOP COMPILER_RT_VISIBILITY COMPILER_RT_WEAK;
+ 
++// Insert my own hook for override addresses
++typedef struct {
++  const __llvm_profile_data *DataFirst;
++  const __llvm_profile_data *DataLast;
++  const char *NamesFirst;
++  const char *NamesLast;
++  char *CountersFirst;
++  char *CountersLast;
++} ProfDataLocs;
++
++// This will be overridden whenever GPU instrumentation is enabled (i.e. host
++// rtlib is linked with this)
++extern ProfDataLocs __llvm_prf_override_locs
++COMPILER_RT_VISIBILITY COMPILER_RT_WEAK;
++
+ COMPILER_RT_VISIBILITY const __llvm_profile_data *
+ __llvm_profile_begin_data(void) {
++  if (&__llvm_prf_override_locs) {
++      return __llvm_prf_override_locs.DataFirst;
++  }
+   return &PROF_DATA_START;
+ }
+ COMPILER_RT_VISIBILITY const __llvm_profile_data *
+ __llvm_profile_end_data(void) {
++  if (&__llvm_prf_override_locs) {
++      return __llvm_prf_override_locs.DataLast;
++  }
+   return &PROF_DATA_STOP;
+ }
+ COMPILER_RT_VISIBILITY const char *__llvm_profile_begin_names(void) {
++  if (&__llvm_prf_override_locs) {
++      return __llvm_prf_override_locs.NamesFirst;
++  }
+   return &PROF_NAME_START;
+ }
+ COMPILER_RT_VISIBILITY const char *__llvm_profile_end_names(void) {
++  if (&__llvm_prf_override_locs) {
++      return __llvm_prf_override_locs.NamesLast;
++  }
+   return &PROF_NAME_STOP;
+ }
+ COMPILER_RT_VISIBILITY char *__llvm_profile_begin_counters(void) {
++  if (&__llvm_prf_override_locs) {
++      return __llvm_prf_override_locs.CountersFirst;
++  }
+   return &PROF_CNTS_START;
+ }
+ COMPILER_RT_VISIBILITY char *__llvm_profile_end_counters(void) {
++  if (&__llvm_prf_override_locs) {
++      return __llvm_prf_override_locs.CountersLast;
++  }
+   return &PROF_CNTS_STOP;
+ }
+ COMPILER_RT_VISIBILITY uint32_t *__llvm_profile_begin_orderfile(void) {
