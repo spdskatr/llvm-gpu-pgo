@@ -60,7 +60,7 @@ void fetchLocs() {
     HostLoc.DataFirst = (__llvm_profile_data *)malloc(DataSize * sizeof(__llvm_profile_data));
     HostLoc.DataLast = HostLoc.DataFirst + DataSize;
     HostLoc.NamesFirst = (const char *)malloc(NamesSize * sizeof(char));
-    HostLoc.NamesLast = HostLoc.NamesFirst + DataSize;
+    HostLoc.NamesLast = HostLoc.NamesFirst + NamesSize;
     HostLoc.CountersFirst = (char *)malloc(CountersSize * sizeof(char));
     HostLoc.CountersLast = HostLoc.CountersFirst + CountersSize;
 
