@@ -49,6 +49,20 @@ size_t distanceInBytes(T* start, T* end) {
     return (end - start) * sizeof(T);
 }
 
+void fixRelativePositions() {
+    // We have to change the relative pointers for the profdata since all the
+    // memory locations have changed
+    size_t HostCounterRel = (size_t)HostLoc.CountersFirst - (size_t)HostLoc.DataFirst;
+    size_t DeviceCounterRel = (size_t)DeviceLoc.CountersFirst - (size_t)DeviceLoc.DataFirst;
+    size_t RelativePtrChange = HostCounterRel - DeviceCounterRel;
+    for (auto *Data = HostLoc.DataFirst; Data < HostLoc.DataLast; Data++) {
+        // Unfortunately .CounterPtr has type void *const, but luckily we
+        // can cast and it works fine because the memory is on the heap
+        size_t *Rel = const_cast<size_t *>(&Data->CounterPtr);
+        *Rel = Data->CounterPtr + RelativePtrChange;
+    }
+}
+
 void fetchLocs() {
     HIP_ASSERT(hipMemcpyFromSymbol(&DeviceLoc, __llvm_gpuprof_loc,
         sizeof(ProfDataLocs), 0, hipMemcpyDeviceToHost));
@@ -79,6 +93,8 @@ void fetchData() {
     memcpyArbitraryDeviceToHost(
         (void *)HostLoc.CountersFirst, (void *)DeviceLoc.CountersFirst,
         distanceInBytes(HostLoc.CountersFirst, HostLoc.CountersLast));
+
+    fixRelativePositions();
 }
 
 extern "C"
@@ -87,10 +103,14 @@ void __llvm_gpuprof_sync(void) {
     if (!DeviceLoc.DataFirst)
         fetchLocs();
     fetchData();
+
+    // Show where the data got copied from/to
     printf("Device loc:\n");
     dumpRes(DeviceLoc);
     printf("Host loc:\n");
     dumpRes(HostLoc);
+
+    // Show some data
     printf("counters:");
     for (char *c = HostLoc.CountersFirst; c < HostLoc.CountersLast; c++) {
         printf(" %02x", (unsigned char)*c);

@@ -9,15 +9,15 @@ enum ValueKind {
 #include "profile/InstrProfData.inc"
 };
 
-typedef void *IntPtrT;
+typedef size_t IntPtrT;
 typedef struct __llvm_profile_data {
 #define INSTR_PROF_DATA(Type, LLVMType, Name, Initializer) Type Name;
 #include "profile/InstrProfData.inc"
 } __llvm_profile_data;
 
 typedef struct {
-    const __llvm_profile_data *DataFirst;
-    const __llvm_profile_data *DataLast;
+    __llvm_profile_data *DataFirst;
+    __llvm_profile_data *DataLast;
     const char *NamesFirst;
     const char *NamesLast;
     char *CountersFirst;

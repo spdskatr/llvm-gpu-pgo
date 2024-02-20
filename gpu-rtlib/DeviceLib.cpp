@@ -25,22 +25,22 @@ __device__ void __llvm_profile_register_function(void *Data_) {
     // We assume that counters are have size uint64
     // (i.e. __llvm_profile_counter_entry_size() == sizeof(uint64_t))
     // This is probably true for any future llvm version that rocm supports
-    const __llvm_profile_data *Data = (__llvm_profile_data *)Data_;
+    __llvm_profile_data *Data = (__llvm_profile_data *)Data_;
     if (!__llvm_gpuprof_loc[0].DataFirst) {
         __llvm_gpuprof_loc[0].DataFirst = Data;
         __llvm_gpuprof_loc[0].DataLast = Data + 1;
-        __llvm_gpuprof_loc[0].CountersFirst = (char *)((size_t)Data_ + (size_t)Data->CounterPtr);
+        __llvm_gpuprof_loc[0].CountersFirst = (char *)((size_t)Data_ + Data->CounterPtr);
         __llvm_gpuprof_loc[0].CountersLast =
             __llvm_gpuprof_loc[0].CountersFirst + Data->NumCounters * sizeof(uint64_t);
     } else {
-        __llvm_gpuprof_loc[0].DataFirst = (const __llvm_profile_data *)getMinAddr(__llvm_gpuprof_loc[0].DataFirst, Data);
+        __llvm_gpuprof_loc[0].DataFirst = (__llvm_profile_data *)getMinAddr(__llvm_gpuprof_loc[0].DataFirst, Data);
         __llvm_gpuprof_loc[0].CountersFirst = (char *)getMinAddr(
             __llvm_gpuprof_loc[0].CountersFirst, (char *)((size_t)Data_ + (size_t)Data->CounterPtr));
 
-        __llvm_gpuprof_loc[0].DataLast = (const __llvm_profile_data *)getMaxAddr(__llvm_gpuprof_loc[0].DataLast, Data + 1);
+        __llvm_gpuprof_loc[0].DataLast = (__llvm_profile_data *)getMaxAddr(__llvm_gpuprof_loc[0].DataLast, Data + 1);
         __llvm_gpuprof_loc[0].CountersLast = (char *)getMaxAddr(
             __llvm_gpuprof_loc[0].CountersLast,
-            (char *)((size_t)Data_ + (size_t)Data->CounterPtr +
+            (char *)((size_t)Data_ + Data->CounterPtr +
                 Data->NumCounters * sizeof(uint64_t)));
     }
 }
