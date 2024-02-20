@@ -6,9 +6,9 @@
 #include "RTLib.h"
 
 #ifdef __LLVM_GPUPROF_DEBUG
-#define DEBUG(x...) printf(x)
+#define DEBUG_PRINTF(x...) fprintf(stderr, x)
 #else
-#define DEBUG(x...)
+#define DEBUG_PRINTF(x...)
 #endif
 
 #define HostLoc __llvm_prf_override_locs
@@ -42,27 +42,27 @@ void memcpyArbitraryDeviceToHost(void *hostPtr, const void *devPtr, size_t size)
 }
 
 void debugRes(ProfDataLocs& res) {
-    printf("DataFirst: %p\n", res.DataFirst);
-    printf("DataLast: %p\n", res.DataLast);
-    printf("NamesFirst: %p\n", res.NamesFirst);
-    printf("NamesLast: %p\n", res.NamesLast);
-    printf("CountersFirst: %p\n", res.CountersFirst);
-    printf("CountersLast: %p\n", res.CountersLast);
+    DEBUG_PRINTF("DataFirst: %p\n", res.DataFirst);
+    DEBUG_PRINTF("DataLast: %p\n", res.DataLast);
+    DEBUG_PRINTF("NamesFirst: %p\n", res.NamesFirst);
+    DEBUG_PRINTF("NamesLast: %p\n", res.NamesLast);
+    DEBUG_PRINTF("CountersFirst: %p\n", res.CountersFirst);
+    DEBUG_PRINTF("CountersLast: %p\n", res.CountersLast);
 }
 
 void debugLog() {
     // Show where the data got copied from/to
-    printf("Device loc:\n");
+    DEBUG_PRINTF("Device loc:\n");
     debugRes(DeviceLoc);
-    printf("Host loc:\n");
+    DEBUG_PRINTF("Host loc:\n");
     debugRes(HostLoc);
 
     // Show some data
-    printf("counters:");
+    DEBUG_PRINTF("counters:");
     for (char *c = HostLoc.CountersFirst; c < HostLoc.CountersLast; c++) {
-        printf(" %02x", (unsigned char)*c);
+        DEBUG_PRINTF(" %02x", (unsigned char)*c);
     }
-    printf("\n");
+    DEBUG_PRINTF("\n");
 }
 
 template <typename T>
