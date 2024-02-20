@@ -5,8 +5,15 @@
 #include "hip/hip_runtime_api.h"
 #include "RTLib.h"
 
+#define HostLoc __llvm_prof_override_locs
+
 #define HIP_ASSERT(x) (assert((x)==hipSuccess))
 ProfDataLocs *init_loc(void);
+
+// Compiler-rt hooks to init and write the profile data.
+int __llvm_profile_runtime;
+extern "C" void __llvm_profile_initialize_file(void);
+extern "C" int __llvm_profile_write_file(void);
 
 // Define the host symbol that gets registered with DeviceLib symbol by the
 // GPUInstrPass.
@@ -56,6 +63,9 @@ void fetchLocs() {
     HostLoc.NamesLast = HostLoc.NamesFirst + DataSize;
     HostLoc.CountersFirst = (char *)malloc(CountersSize * sizeof(char));
     HostLoc.CountersLast = HostLoc.CountersFirst + CountersSize;
+
+    // Now that we have profdata, we should initialise compiler-rt now
+    __llvm_profile_initialize_file();
 }
 
 void fetchData() {
@@ -85,8 +95,13 @@ void __llvm_gpuprof_sync(void) {
     printf("\n");
 }
 
-ProfDataLocs *init_loc(void) {
-    // We can put initialisation code here, we just can't use atexit because
-    // that will be too late
+void dump_data_to_file() {
+    assert(__llvm_profile_write_file());
+} 
+
+ProfDataLocs *init_loc() {
+    // We can put initialisation code here, this will always run after the main
+    // hip module gets initialised
+    atexit(dump_data_to_file);
     return nullptr;
 }
