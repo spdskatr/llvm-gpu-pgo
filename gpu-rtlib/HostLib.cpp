@@ -96,7 +96,7 @@ void __llvm_gpuprof_sync(void) {
 }
 
 void dump_data_to_file() {
-    assert(__llvm_profile_write_file());
+    assert(!__llvm_profile_write_file());
 } 
 
 ProfDataLocs *init_loc() {
