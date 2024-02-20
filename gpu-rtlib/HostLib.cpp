@@ -5,6 +5,12 @@
 #include "hip/hip_runtime_api.h"
 #include "RTLib.h"
 
+#ifdef __LLVM_GPUPROF_DEBUG
+#define DEBUG(x...) printf(x)
+#else
+#define DEBUG(x...)
+#endif
+
 #define HostLoc __llvm_prf_override_locs
 
 #define HIP_ASSERT(x) (assert((x)==hipSuccess))
@@ -35,13 +41,28 @@ void memcpyArbitraryDeviceToHost(void *hostPtr, const void *devPtr, size_t size)
     HIP_ASSERT(hipFree(proxyPtr));
 }
 
-void dumpRes(ProfDataLocs& res) {
+void debugRes(ProfDataLocs& res) {
     printf("DataFirst: %p\n", res.DataFirst);
     printf("DataLast: %p\n", res.DataLast);
     printf("NamesFirst: %p\n", res.NamesFirst);
     printf("NamesLast: %p\n", res.NamesLast);
     printf("CountersFirst: %p\n", res.CountersFirst);
     printf("CountersLast: %p\n", res.CountersLast);
+}
+
+void debugLog() {
+    // Show where the data got copied from/to
+    printf("Device loc:\n");
+    debugRes(DeviceLoc);
+    printf("Host loc:\n");
+    debugRes(HostLoc);
+
+    // Show some data
+    printf("counters:");
+    for (char *c = HostLoc.CountersFirst; c < HostLoc.CountersLast; c++) {
+        printf(" %02x", (unsigned char)*c);
+    }
+    printf("\n");
 }
 
 template <typename T>
@@ -103,19 +124,7 @@ void __llvm_gpuprof_sync(void) {
     if (!DeviceLoc.DataFirst)
         fetchLocs();
     fetchData();
-
-    // Show where the data got copied from/to
-    printf("Device loc:\n");
-    dumpRes(DeviceLoc);
-    printf("Host loc:\n");
-    dumpRes(HostLoc);
-
-    // Show some data
-    printf("counters:");
-    for (char *c = HostLoc.CountersFirst; c < HostLoc.CountersLast; c++) {
-        printf(" %02x", (unsigned char)*c);
-    }
-    printf("\n");
+    debugLog();
 }
 
 void dump_data_to_file() {
