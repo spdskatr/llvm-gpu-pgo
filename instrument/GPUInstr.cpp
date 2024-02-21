@@ -88,6 +88,5 @@ llvmGetPassPluginInfo() { return {
         PB.registerPipelineEarlySimplificationEPCallback([](ModulePassManager &MPM, OptimizationLevel OL) {
             MPM.addPass(GPUInstrPass{});
         });
-        PB.printPassNames(errs());
     }
 };}
