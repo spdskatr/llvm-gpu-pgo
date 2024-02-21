@@ -1,5 +1,5 @@
 add_llvm_pass_plugin(GPUInstrPass
-    AMDGPUAtomicLowering.cpp
+    IncrementToWarpBallot.cpp
     CreateInstrProfRuntimeHook.cpp
     GPUInstr.cpp
     GPURTLibInterop.cpp
