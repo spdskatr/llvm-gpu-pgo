@@ -48,7 +48,8 @@ PreservedAnalyses GPUInstrPass::run(Module &M, ModuleAnalysisManager &AM) {
         FPM.addPass(SimplifyCFGPass{
             SimplifyCFGOptions{}.convertSwitchRangeToICmp(true)});
         FPM.addPass(InstCombinePass{});
-        MIWP.getPM().addPass(createCGSCCToFunctionPassAdaptor(std::move(FPM), true));
+        MIWP.getPM().addPass(
+            createCGSCCToFunctionPassAdaptor(std::move(FPM), false));
         MPM.addPass(std::move(MIWP));
         MPM.addPass(GlobalDCEPass{});
 
