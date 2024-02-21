@@ -1,20 +1,18 @@
-#include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/GlobalValue.h"
-#include "llvm/IR/GlobalVariable.h"
-#include "llvm/Pass.h"
-#include "llvm/Passes/PassBuilder.h"
-#include "llvm/Passes/PassPlugin.h"
-#include "llvm/ProfileData/InstrProf.h"
-#include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/Instrumentation/PGOInstrumentation.h"
-#include "llvm/Transforms/Instrumentation/InstrProfiling.h"
-#include "llvm/Transforms/Scalar/SROA.h"
-#include "llvm/Transforms/Scalar/EarlyCSE.h"
-#include "llvm/Transforms/Scalar/SimplifyCFG.h"
-#include "llvm/Transforms/IPO/GlobalDCE.h"
-#include "llvm/Transforms/InstCombine/InstCombine.h"
-#include "llvm/IR/PassManager.h"
-#include "llvm/IR/Verifier.h"
+#include <llvm/IR/BasicBlock.h>
+#include <llvm/IR/GlobalValue.h>
+#include <llvm/IR/GlobalVariable.h>
+#include <llvm/Pass.h>
+#include <llvm/ProfileData/InstrProf.h>
+#include <llvm/Support/raw_ostream.h>
+#include <llvm/Transforms/Instrumentation/PGOInstrumentation.h>
+#include <llvm/Transforms/Instrumentation/InstrProfiling.h>
+#include <llvm/Transforms/Scalar/SROA.h>
+#include <llvm/Transforms/Scalar/EarlyCSE.h>
+#include <llvm/Transforms/Scalar/SimplifyCFG.h>
+#include <llvm/Transforms/IPO/GlobalDCE.h>
+#include <llvm/Transforms/InstCombine/InstCombine.h>
+#include <llvm/IR/PassManager.h>
+#include <llvm/IR/Verifier.h>
 #include <llvm/Analysis/CGSCCPassManager.h>
 #include <llvm/Analysis/InlineAdvisor.h>
 #include <llvm/Passes/OptimizationLevel.h>
@@ -76,20 +74,3 @@ PreservedAnalyses GPUInstrPass::run(Module &M, ModuleAnalysisManager &AM) {
     return PreservedAnalyses::all();
 };
 
-
-extern "C" LLVM_ATTRIBUTE_WEAK ::llvm::PassPluginLibraryInfo
-llvmGetPassPluginInfo() { return {
-    .APIVersion = LLVM_PLUGIN_API_VERSION,
-    .PluginName = "GPU PGO instrumentation pass",
-    .PluginVersion = "v0.1",
-    .RegisterPassBuilderCallbacks = [](PassBuilder &PB) {
-        PB.registerPipelineStartEPCallback([](ModulePassManager &MPM, OptimizationLevel OL) {
-            MPM.addPass(GPURTLibInteropPass{});
-        });
-        // Insert PGO instrumentation as close to the original place as
-        // possible, which is during the module simplification pipeline.
-        PB.registerPipelineEarlySimplificationEPCallback([](ModulePassManager &MPM, OptimizationLevel OL) {
-            MPM.addPass(GPUInstrPass{});
-        });
-    }
-};}

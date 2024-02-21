@@ -8,3 +8,7 @@ struct GPURTLibInteropPass : public llvm::PassInfoMixin<GPURTLibInteropPass> {
 struct GPUInstrPass : public llvm::PassInfoMixin<GPUInstrPass> {
     llvm::PreservedAnalyses run(llvm::Module &M, llvm::ModuleAnalysisManager &AM);
 };
+
+struct AMDGPUAtomicLoweringPass : public llvm::PassInfoMixin<AMDGPUAtomicLoweringPass> {
+    llvm::PreservedAnalyses run(llvm::Module &M, llvm::ModuleAnalysisManager &AM);
+};
