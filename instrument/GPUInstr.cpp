@@ -11,6 +11,7 @@
 #include "llvm/Transforms/Scalar/SROA.h"
 #include "llvm/Transforms/Scalar/EarlyCSE.h"
 #include "llvm/Transforms/Scalar/SimplifyCFG.h"
+#include "llvm/Transforms/IPO/GlobalDCE.h"
 #include "llvm/Transforms/InstCombine/InstCombine.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Verifier.h"
@@ -49,6 +50,7 @@ PreservedAnalyses GPUInstrPass::run(Module &M, ModuleAnalysisManager &AM) {
         FPM.addPass(InstCombinePass{});
         MIWP.getPM().addPass(createCGSCCToFunctionPassAdaptor(std::move(FPM), true));
         MPM.addPass(std::move(MIWP));
+        MPM.addPass(GlobalDCEPass{});
 
         // Insert intrinsics
         // NOTE: LLVM was modified to change bitcasts to addrspace casts
