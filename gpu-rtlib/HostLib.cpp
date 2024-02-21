@@ -1,3 +1,4 @@
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <cassert>
@@ -25,7 +26,7 @@ extern "C" int __llvm_profile_write_file(void);
 // GPUInstrPass.
 ProfDataLocs *__llvm_gpuprof_loc = init_loc();
 
-// Device addresses for profiling data.
+// Device addresses for profiling data. Registered with device side by GPUInstrPass.
 ProfDataLocs DeviceLoc;
 // Host addresses for profiling data.
 ProfDataLocs HostLoc;
@@ -73,13 +74,13 @@ size_t distanceInBytes(T* start, T* end) {
 void fixRelativePositions() {
     // We have to change the relative pointers for the profdata since all the
     // memory locations have changed
-    size_t HostCounterRel = (size_t)HostLoc.CountersFirst - (size_t)HostLoc.DataFirst;
-    size_t DeviceCounterRel = (size_t)DeviceLoc.CountersFirst - (size_t)DeviceLoc.DataFirst;
+    size_t HostCounterRel = HostLoc.CountersFirst - reinterpret_cast<char *>(HostLoc.DataFirst);
+    size_t DeviceCounterRel = DeviceLoc.CountersFirst - reinterpret_cast<char *>(DeviceLoc.DataFirst);
     size_t RelativePtrChange = HostCounterRel - DeviceCounterRel;
     for (auto *Data = HostLoc.DataFirst; Data < HostLoc.DataLast; Data++) {
-        // Unfortunately .CounterPtr has type void *const, but luckily we
+        // Unfortunately .CounterPtr has type const uintptr_t, but luckily we
         // can cast and it works fine because the memory is on the heap
-        size_t *Rel = const_cast<size_t *>(&Data->CounterPtr);
+        uintptr_t *Rel = const_cast<uintptr_t *>(&Data->CounterPtr);
         *Rel = Data->CounterPtr + RelativePtrChange;
     }
 }
@@ -92,11 +93,11 @@ void fetchLocs() {
     size_t NamesSize = DeviceLoc.NamesLast - DeviceLoc.NamesFirst;
     size_t CountersSize = DeviceLoc.CountersLast - DeviceLoc.CountersFirst;
 
-    HostLoc.DataFirst = (__llvm_profile_data *)malloc(DataSize * sizeof(__llvm_profile_data));
+    HostLoc.DataFirst = static_cast<__llvm_profile_data *>(malloc(DataSize * sizeof(__llvm_profile_data)));
     HostLoc.DataLast = HostLoc.DataFirst + DataSize;
-    HostLoc.NamesFirst = (const char *)malloc(NamesSize * sizeof(char));
+    HostLoc.NamesFirst = static_cast<char *>(malloc(NamesSize * sizeof(char)));
     HostLoc.NamesLast = HostLoc.NamesFirst + NamesSize;
-    HostLoc.CountersFirst = (char *)malloc(CountersSize * sizeof(char));
+    HostLoc.CountersFirst = static_cast<char *>(malloc(CountersSize * sizeof(char)));
     HostLoc.CountersLast = HostLoc.CountersFirst + CountersSize;
 
     // Now that we have profdata, we should initialise compiler-rt now
@@ -106,13 +107,13 @@ void fetchLocs() {
 void fetchData() {
     assert(HostLoc.DataFirst && "Locs were not fetched!");
     memcpyArbitraryDeviceToHost(
-        (void *)HostLoc.DataFirst, (void *)DeviceLoc.DataFirst,
+        HostLoc.DataFirst, DeviceLoc.DataFirst,
         distanceInBytes(HostLoc.DataFirst, HostLoc.DataLast));
     memcpyArbitraryDeviceToHost(
-        (void *)HostLoc.NamesFirst, (void *)DeviceLoc.NamesFirst,
+        HostLoc.NamesFirst, DeviceLoc.NamesFirst,
         distanceInBytes(HostLoc.NamesFirst, HostLoc.NamesLast));
     memcpyArbitraryDeviceToHost(
-        (void *)HostLoc.CountersFirst, (void *)DeviceLoc.CountersFirst,
+        HostLoc.CountersFirst, DeviceLoc.CountersFirst,
         distanceInBytes(HostLoc.CountersFirst, HostLoc.CountersLast));
 
     fixRelativePositions();

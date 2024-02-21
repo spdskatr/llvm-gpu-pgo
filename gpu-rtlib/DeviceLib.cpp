@@ -8,51 +8,54 @@
 #include "hip/driver_types.h"
 #include "RTLib.h"
 
+#define Loc __llvm_gpuprof_loc
 #define HIP_ASSERT(x) (assert((x)==hipSuccess))
 
-static __device__ const void *getMinAddr(const void *A1, const void *A2) {
+template <typename T>
+static __device__ T *getMinAddr(T *A1, T *A2) {
   return A1 < A2 ? A1 : A2;
 }
 
-static __device__ const void *getMaxAddr(const void *A1, const void *A2) {
+template <typename T>
+static __device__ T *getMaxAddr(T *A1, T *A2) {
   return A1 > A2 ? A1 : A2;
 }
 
-__device__ ProfDataLocs __llvm_gpuprof_loc[1];
+__device__ ProfDataLocs Loc[1];
 
 extern "C"
 __device__ void __llvm_profile_register_function(void *Data_) {
     // We assume that counters are have size uint64
     // (i.e. __llvm_profile_counter_entry_size() == sizeof(uint64_t))
     // This is probably true for any future llvm version that rocm supports
-    __llvm_profile_data *Data = (__llvm_profile_data *)Data_;
-    if (!__llvm_gpuprof_loc[0].DataFirst) {
-        __llvm_gpuprof_loc[0].DataFirst = Data;
-        __llvm_gpuprof_loc[0].DataLast = Data + 1;
-        __llvm_gpuprof_loc[0].CountersFirst = (char *)((size_t)Data_ + Data->CounterPtr);
-        __llvm_gpuprof_loc[0].CountersLast =
-            __llvm_gpuprof_loc[0].CountersFirst + Data->NumCounters * sizeof(uint64_t);
+    __llvm_profile_data *Data = static_cast<__llvm_profile_data *>(Data_);
+    if (!Loc[0].DataFirst) {
+        Loc[0].DataFirst = Data;
+        Loc[0].DataLast = Data + 1;
+        Loc[0].CountersFirst = static_cast<char *>(Data_) + Data->CounterPtr;
+        Loc[0].CountersLast =
+            Loc[0].CountersFirst + Data->NumCounters * sizeof(uint64_t);
     } else {
-        __llvm_gpuprof_loc[0].DataFirst = (__llvm_profile_data *)getMinAddr(__llvm_gpuprof_loc[0].DataFirst, Data);
-        __llvm_gpuprof_loc[0].CountersFirst = (char *)getMinAddr(
-            __llvm_gpuprof_loc[0].CountersFirst, (char *)((size_t)Data_ + (size_t)Data->CounterPtr));
+        Loc[0].DataFirst = getMinAddr(Loc[0].DataFirst, Data);
+        Loc[0].CountersFirst = getMinAddr(
+            Loc[0].CountersFirst, static_cast<char *>(Data_) + Data->CounterPtr);
 
-        __llvm_gpuprof_loc[0].DataLast = (__llvm_profile_data *)getMaxAddr(__llvm_gpuprof_loc[0].DataLast, Data + 1);
-        __llvm_gpuprof_loc[0].CountersLast = (char *)getMaxAddr(
-            __llvm_gpuprof_loc[0].CountersLast,
-            (char *)((size_t)Data_ + Data->CounterPtr +
-                Data->NumCounters * sizeof(uint64_t)));
+        Loc[0].DataLast = getMaxAddr(Loc[0].DataLast, Data + 1);
+        Loc[0].CountersLast = getMaxAddr(
+            Loc[0].CountersLast,
+            static_cast<char *>(Data_) + Data->CounterPtr + Data->NumCounters * sizeof(uint64_t));
     }
 }
 
 extern "C"
-__device__ void __llvm_profile_register_names_function(void *NamesStart, uint64_t NamesSize) {
-    if (!__llvm_gpuprof_loc[0].NamesFirst) {
-        __llvm_gpuprof_loc[0].NamesFirst = (const char *)NamesStart;
-        __llvm_gpuprof_loc[0].NamesLast = (const char *)NamesStart + NamesSize;
+__device__ void __llvm_profile_register_names_function(void *NamesStart_, uint64_t NamesSize) {
+    char *NamesStart = static_cast<char *>(NamesStart_);
+    if (!Loc[0].NamesFirst) {
+        Loc[0].NamesFirst = NamesStart;
+        Loc[0].NamesLast = NamesStart + NamesSize;
         return;
     }
-    __llvm_gpuprof_loc[0].NamesFirst = (const char *)getMinAddr(__llvm_gpuprof_loc[0].NamesFirst, NamesStart);
-    __llvm_gpuprof_loc[0].NamesLast =
-        (const char *)getMaxAddr(__llvm_gpuprof_loc[0].NamesLast, (const char *)NamesStart + NamesSize);
+    Loc[0].NamesFirst = getMinAddr(Loc[0].NamesFirst, NamesStart);
+    Loc[0].NamesLast =
+        getMaxAddr(Loc[0].NamesLast, NamesStart + NamesSize);
 }

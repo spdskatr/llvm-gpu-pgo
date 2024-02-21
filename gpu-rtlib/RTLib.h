@@ -1,3 +1,4 @@
+#include <cstdint>
 typedef unsigned long uint64_t;
 typedef unsigned uint32_t;
 typedef unsigned short uint16_t;
@@ -9,7 +10,7 @@ enum ValueKind {
 #include "profile/InstrProfData.inc"
 };
 
-typedef size_t IntPtrT;
+typedef uintptr_t IntPtrT;
 typedef struct __llvm_profile_data {
 #define INSTR_PROF_DATA(Type, LLVMType, Name, Initializer) Type Name;
 #include "profile/InstrProfData.inc"
@@ -18,8 +19,8 @@ typedef struct __llvm_profile_data {
 typedef struct {
     __llvm_profile_data *DataFirst;
     __llvm_profile_data *DataLast;
-    const char *NamesFirst;
-    const char *NamesLast;
+    char *NamesFirst;
+    char *NamesLast;
     char *CountersFirst;
     char *CountersLast;
 } ProfDataLocs;
