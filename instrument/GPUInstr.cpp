@@ -115,7 +115,6 @@ struct GPUInstrPass : public PassInfoMixin<GPUInstrPass> {
 
             // Lower intrinsics
             // NOTE: LLVM was modified to change bitcasts to addrspace casts
-            // and also not emit the profiler initialisation function
             InstrProfiling p{InstrProfOptions {
                 .NoRedZone = false,
                 .DoCounterPromotion = false,
