@@ -1,11 +1,6 @@
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/Constants.h"
-#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
-#include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/Instructions.h"
 #include "llvm/Pass.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Passes/PassPlugin.h"
@@ -13,145 +8,86 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Instrumentation/PGOInstrumentation.h"
 #include "llvm/Transforms/Instrumentation/InstrProfiling.h"
+#include "llvm/Transforms/Scalar/SROA.h"
+#include "llvm/Transforms/Scalar/EarlyCSE.h"
+#include "llvm/Transforms/Scalar/SimplifyCFG.h"
+#include "llvm/Transforms/InstCombine/InstCombine.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Verifier.h"
+#include <llvm/Analysis/CGSCCPassManager.h>
+#include <llvm/Analysis/InlineAdvisor.h>
+#include <llvm/Passes/OptimizationLevel.h>
 #include <llvm/Support/Casting.h>
-
-#define HIP_REGISTER_VAR_NAME "__hipRegisterVar"
-#define HIP_REGISTER_GLOBALS_NAME "__hip_register_globals"
-#define GPUPROF_LOC_NAME "__llvm_gpuprof_loc"
-#define HIP_LAUNCH_KERNEL_NAME "hipLaunchKernel"
-#define GPUPROF_SYNC_NAME "__llvm_gpuprof_sync"
+#include <llvm/Transforms/IPO/Inliner.h>
+#include <llvm/Transforms/Utils/SimplifyCFGOptions.h>
+#include "Passes.h"
 
 using namespace llvm;
 
-namespace {
+PreservedAnalyses GPUInstrPass::run(Module &M, ModuleAnalysisManager &AM) {
+    // Only run PGO instrumentation if the target is GPU
+    if (M.getTargetTriple() == "amdgcn-amd-amdhsa") {
+        errs() << "Running PGO instrumentation on module " << M.getModuleIdentifier() 
+            << " with device target " << M.getTargetTriple() << "\n";
 
-struct GPUInstrPass : public PassInfoMixin<GPUInstrPass> {
-    // Insert code within __hip_register_globals:
-    // __hipRegisterVar(<handle>, __llvm_gpuprof_loc, "__llvm_gpuprof_loc", 
-    //                  "__llvm_gpuprof_loc", 1, 8, 0, 0)
-    void insertRegisterVar(Module &M) {
-        auto *RegisterVarF = M.getFunction(HIP_REGISTER_VAR_NAME);
-        auto *RegisterGlobalsF = M.getFunction(HIP_REGISTER_GLOBALS_NAME);
-
-        IRBuilder<> IRB{&*RegisterGlobalsF->getEntryBlock().getFirstInsertionPt()};
-        auto *IntTy = IRB.getInt32Ty();
-        auto *SizeTy = IRB.getInt64Ty();
-        auto *PtrTy = Type::getInt64PtrTy(M.getContext());
-
-        // Add global shadow variable for the loc name
-        auto *LocNameVar = IRB.CreateGlobalString(GPUPROF_LOC_NAME);
-        auto *LocVar = new GlobalVariable(
-            M, PtrTy, false, llvm::GlobalValue::ExternalLinkage, 
-            nullptr, GPUPROF_LOC_NAME);
-        LocVar->setExternallyInitialized(true);
-
-        // The first argument of __hipRegisterVar stores the GPUBinaryHandle.
-        // See: clang/lib/CodeGen/CGCUDANV.cpp
-        auto *GPUHandle = RegisterGlobalsF->getArg(0);
-        ArrayRef<Value *> args{{ 
-            GPUHandle, 
-            LocVar, 
-            LocNameVar, 
-            LocNameVar, 
-            ConstantInt::get(IntTy, 1),
-            ConstantInt::get(SizeTy, 8),
-            ConstantInt::get(IntTy, 0),
-            ConstantInt::get(IntTy, 0) }};
-        IRB.CreateCall(RegisterVarF, args);
-    }
-
-    void insertGPUProfDump(Module &M) {
-        for (Function &F : M) {
-            for (BasicBlock &B : F) {
-                for (Instruction &I : B) {
-                    if (CallInst *C = dyn_cast<CallInst>(&I)) {
-                        Function *Callee = C->getCalledFunction();
-                        if (Callee && Callee->getName() == HIP_LAUNCH_KERNEL_NAME) {
-                            IRBuilder IRB{C->getInsertionPointAfterDef()};
-                            FunctionType *FT = FunctionType::get(IRB.getVoidTy(), false);
-                            Function *F = Function::Create(FT, llvm::GlobalValue::ExternalLinkage, 0u, GPUPROF_SYNC_NAME, &M);
-                            IRB.CreateCall(F, {});
-                            errs() << "Inserted a call for kernel call " << C->getArgOperand(0)->getName() << "\n";
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    PreservedAnalyses instrumentHostCode(Module &M, ModuleAnalysisManager &AM) {
-        insertRegisterVar(M);
-        insertGPUProfDump(M);
-        return PreservedAnalyses::all();
-    }
-
-    void createGPURuntimeHook(Module &M) {
-        auto *Int32Ty = Type::getInt32Ty(M.getContext());
-        auto *Var = new GlobalVariable(M, Int32Ty, false,
-             GlobalValue::ExternalLinkage, nullptr, getInstrProfRuntimeHookVarName());
-        Var->setVisibility(GlobalValue::HiddenVisibility);
-    }
-
-    PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM) {
-        PreservedAnalyses pa = PreservedAnalyses::all();
-        if (M.getTargetTriple() == "amdgcn-amd-amdhsa") {
-            errs() << "Running PGO instrumentation on module " << M.getModuleIdentifier() 
-                << " with device target " << M.getTargetTriple() << "\n";
-
-            // Create a runtime hook variable so it doesn't inadvertently end
-            // up being called by __llvm_profile_register_function. This is a
-            // bit stupid.
-            // We don't care if this variable is stripped out. This is just to
-            // disable a bug in LLVM 17.
-            // See: InstrProfiling::emitRegistration()
-            createGPURuntimeHook(M);
-
-            // Insert intrinsics
-            // NOTE: LLVM was modified to change bitcasts to addrspace casts
-            PGOInstrumentationGen g;
-            pa.intersect(g.run(M, AM));
-
-            // Lower intrinsics
-            // NOTE: LLVM was modified to change bitcasts to addrspace casts
-            InstrProfiling p{InstrProfOptions {
-                .NoRedZone = false,
-                .DoCounterPromotion = false,
-                .Atomic = true,
-                .UseBFIInPromotion = false,
-                .InstrProfileOutput = "amdgpu.profraw"
+        // Prepare pipeline
+        ModulePassManager MPM;
+        // Preparation
+        // This replicates the setup of addPGOInstrPasses before the
+        // PGOInstrumentationGen pass.
+        InlineParams IP;
+        ModuleInlinerWrapperPass MIWP{IP, true, 
+            InlineContext{
+                .LTOPhase = ThinOrFullLTOPhase::ThinLTOPreLink, 
+                .Pass = llvm::InlinePass::EarlyInliner
             }};
-            pa.intersect(p.run(M, AM));
+        FunctionPassManager FPM;
+        FPM.addPass(SROAPass{SROAOptions::ModifyCFG});
+        FPM.addPass(EarlyCSEPass{});
+        FPM.addPass(SimplifyCFGPass{
+            SimplifyCFGOptions{}.convertSwitchRangeToICmp(true)});
+        FPM.addPass(InstCombinePass{});
+        MIWP.getPM().addPass(createCGSCCToFunctionPassAdaptor(std::move(FPM), true));
+        MPM.addPass(std::move(MIWP));
 
-        } else {
-            // Otherwise, we assume host target
-            errs() << "Running PGO instrumentation on module " << M.getModuleIdentifier() << " with host target " << M.getTargetTriple() << "\n";
-
-            pa.intersect(instrumentHostCode(M, AM));
-        }
+        // Insert intrinsics
+        // NOTE: LLVM was modified to change bitcasts to addrspace casts
+        MPM.addPass(PGOInstrumentationGen{});
+        // Lower intrinsics
+        // NOTE: LLVM was modified to change bitcasts to addrspace casts
+        MPM.addPass(InstrProfiling{InstrProfOptions {
+            .NoRedZone = false,
+            // TODO: See if we can set this to true?
+            .DoCounterPromotion = false,
+            .Atomic = true,
+            .UseBFIInPromotion = false
+        }});
         // Run verifier
-        VerifierPass v;
-        pa.intersect(v.run(M, AM));
+        MPM.addPass(VerifierPass{});
 
+        // Execute pipeline
+        PreservedAnalyses pa = MPM.run(M, AM);
         errs() << "PGO instrumentation completed and verified!\n";
         return pa;
-    };
+    }
+    return PreservedAnalyses::all();
 };
 
-}
 
 extern "C" LLVM_ATTRIBUTE_WEAK ::llvm::PassPluginLibraryInfo
-llvmGetPassPluginInfo() {
-    return {
-        .APIVersion = LLVM_PLUGIN_API_VERSION,
-        .PluginName = "GPU PGO instrumentation pass",
-        .PluginVersion = "v0.1",
-        .RegisterPassBuilderCallbacks = [](PassBuilder &PB) {
-            PB.registerPipelineStartEPCallback(
-                [](ModulePassManager &MPM, OptimizationLevel Level) {
-                    MPM.addPass(GPUInstrPass());
-                });
-        }
-    };
-}
+llvmGetPassPluginInfo() { return {
+    .APIVersion = LLVM_PLUGIN_API_VERSION,
+    .PluginName = "GPU PGO instrumentation pass",
+    .PluginVersion = "v0.1",
+    .RegisterPassBuilderCallbacks = [](PassBuilder &PB) {
+        PB.registerPipelineStartEPCallback([](ModulePassManager &MPM, OptimizationLevel OL) {
+            MPM.addPass(GPURTLibInteropPass{});
+        });
+        // Insert PGO instrumentation as close to the original place as
+        // possible, which is during the module simplification pipeline.
+        PB.registerPipelineEarlySimplificationEPCallback([](ModulePassManager &MPM, OptimizationLevel OL) {
+            MPM.addPass(GPUInstrPass{});
+        });
+        PB.printPassNames(errs());
+    }
+};}
