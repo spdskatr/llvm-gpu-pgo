@@ -12,3 +12,7 @@ struct GPUInstrPass : public llvm::PassInfoMixin<GPUInstrPass> {
 struct AMDGPUAtomicLoweringPass : public llvm::PassInfoMixin<AMDGPUAtomicLoweringPass> {
     llvm::PreservedAnalyses run(llvm::Module &M, llvm::ModuleAnalysisManager &AM);
 };
+
+struct CreateInstrProfRuntimeHookPass : public llvm::PassInfoMixin<CreateInstrProfRuntimeHookPass> {
+    llvm::PreservedAnalyses run(llvm::Module &M, llvm::ModuleAnalysisManager &AM);
+};

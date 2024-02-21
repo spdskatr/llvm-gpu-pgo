@@ -54,6 +54,8 @@ PreservedAnalyses GPUInstrPass::run(Module &M, ModuleAnalysisManager &AM) {
         // Insert intrinsics
         // NOTE: LLVM was modified to change bitcasts to addrspace casts
         MPM.addPass(PGOInstrumentationGen{});
+        // Deactivate the bug
+        MPM.addPass(CreateInstrProfRuntimeHookPass{});
         // Lower intrinsics
         // NOTE: LLVM was modified to change bitcasts to addrspace casts
         MPM.addPass(InstrProfiling{InstrProfOptions {
