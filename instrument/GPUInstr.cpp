@@ -61,7 +61,7 @@ PreservedAnalyses GPUInstrPass::run(Module &M, ModuleAnalysisManager &AM) {
         MPM.addPass(InstrProfiling{InstrProfOptions {
             .NoRedZone = false,
             // TODO: See if we can set this to true?
-            .DoCounterPromotion = false,
+            .DoCounterPromotion = true,
             .Atomic = true,
             .UseBFIInPromotion = false
         }});
