@@ -42,6 +42,7 @@ __device__ ProfDataLocs Loc[1] = {
 };
 
 // We no longer need these - keep them in as a stub.
+// These will get optimised out when linked with the device code.
 extern "C"
 __device__ void __llvm_profile_register_function(void *Data_) {
 }
