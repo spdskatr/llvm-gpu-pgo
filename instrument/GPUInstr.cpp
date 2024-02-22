@@ -62,8 +62,7 @@ PreservedAnalyses GPUInstrPass::run(Module &M, ModuleAnalysisManager &AM) {
         // NOTE: LLVM was modified to change bitcasts to addrspace casts
         MPM.addPass(InstrProfiling{InstrProfOptions {
             .NoRedZone = false,
-            // TODO: See if we can set this to true?
-            .DoCounterPromotion = true,
+            .DoCounterPromotion = false,
             .Atomic = true,
             .UseBFIInPromotion = false
         }});
