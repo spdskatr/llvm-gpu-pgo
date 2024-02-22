@@ -18,7 +18,7 @@ using namespace llvm;
 // Insert code within __hip_register_globals:
 // __hipRegisterVar(<handle>, __llvm_gpuprof_loc, "__llvm_gpuprof_loc", 
 //                  "__llvm_gpuprof_loc", 1, 8, 0, 0)
-void insertRegisterVar(Module &M) {
+static void insertRegisterVar(Module &M) {
     auto *RegisterVarF = M.getFunction(HIP_REGISTER_VAR_NAME);
     auto *RegisterGlobalsF = M.getFunction(HIP_REGISTER_GLOBALS_NAME);
 
@@ -50,7 +50,7 @@ void insertRegisterVar(Module &M) {
 }
 
 // After each kernel call, create a call to __llvm_gpuprof_sync()
-void insertGPUProfDump(Module &M) {
+static void insertGPUProfDump(Module &M) {
     for (Function &F : M) {
         for (Instruction &I : instructions(F)) {
             if (CallInst *C = dyn_cast<CallInst>(&I)) {

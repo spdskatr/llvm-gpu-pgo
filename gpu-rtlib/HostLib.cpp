@@ -34,7 +34,7 @@ ProfDataLocs HostLoc;
 // Some GPUs don't like you directly copying from arbitrary memory locations
 // back into the host. We create a proxy buffer on the device and perform two
 // memcpys instead. 
-void memcpyArbitraryDeviceToHost(void *hostPtr, const void *devPtr, size_t size) {
+static void memcpyArbitraryDeviceToHost(void *hostPtr, const void *devPtr, size_t size) {
     void *proxyPtr;
     HIP_ASSERT(hipMalloc(&proxyPtr, size));
     HIP_ASSERT(hipMemcpy(proxyPtr, devPtr, size, hipMemcpyDeviceToDevice));
@@ -42,7 +42,7 @@ void memcpyArbitraryDeviceToHost(void *hostPtr, const void *devPtr, size_t size)
     HIP_ASSERT(hipFree(proxyPtr));
 }
 
-void debugRes(ProfDataLocs& res) {
+static void debugRes(ProfDataLocs& res) {
     DEBUG_PRINTF("DataFirst: %p\n", res.DataFirst);
     DEBUG_PRINTF("DataLast: %p\n", res.DataLast);
     DEBUG_PRINTF("NamesFirst: %p\n", res.NamesFirst);
@@ -51,7 +51,7 @@ void debugRes(ProfDataLocs& res) {
     DEBUG_PRINTF("CountersLast: %p\n", res.CountersLast);
 }
 
-void debugLog() {
+static void debugLog() {
     // Show where the data got copied from/to
     DEBUG_PRINTF("Device loc:\n");
     debugRes(DeviceLoc);
@@ -67,11 +67,11 @@ void debugLog() {
 }
 
 template <typename T>
-size_t distanceInBytes(T* start, T* end) {
+static size_t distanceInBytes(T* start, T* end) {
     return (end - start) * sizeof(T);
 }
 
-void fixRelativePositions() {
+static void fixRelativePositions() {
     // We have to change the relative pointers for the profdata since all the
     // memory locations have changed
     size_t HostCounterRel = HostLoc.CountersFirst - reinterpret_cast<char *>(HostLoc.DataFirst);
@@ -85,7 +85,7 @@ void fixRelativePositions() {
     }
 }
 
-void fetchLocs() {
+static void fetchLocs() {
     HIP_ASSERT(hipMemcpyFromSymbol(&DeviceLoc, __llvm_gpuprof_loc,
         sizeof(ProfDataLocs), 0, hipMemcpyDeviceToHost));
     // Also allocate memory for HostLoc
@@ -104,7 +104,7 @@ void fetchLocs() {
     __llvm_profile_initialize_file();
 }
 
-void fetchData() {
+static void fetchData() {
     assert(HostLoc.DataFirst && "Locs were not fetched!");
     memcpyArbitraryDeviceToHost(
         HostLoc.DataFirst, DeviceLoc.DataFirst,
