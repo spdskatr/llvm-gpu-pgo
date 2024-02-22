@@ -119,6 +119,7 @@ static void fetchData() {
     fixRelativePositions();
 }
 
+// Sync hook run after each kernel call
 extern "C"
 void __llvm_gpuprof_sync(void) {
     HIP_ASSERT(hipDeviceSynchronize());
@@ -135,6 +136,8 @@ void dump_data_to_file() {
 ProfDataLocs *init_loc() {
     // We can put initialisation code here, this will always run after the main
     // hip module gets initialised
+    // Note: We can't atexit and then read profiledata here, by that time the
+    // HIP module would have been deregistered already
     atexit(dump_data_to_file);
     return nullptr;
 }
