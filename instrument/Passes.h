@@ -3,7 +3,7 @@
 #include <llvm/IR/PassManager.h>
 
 struct IncrementToWarpBallotPass : public llvm::PassInfoMixin<IncrementToWarpBallotPass> {
-    llvm::PreservedAnalyses run(llvm::Function &F, llvm::FunctionAnalysisManager &AM);
+    llvm::PreservedAnalyses run(llvm::Module &M, llvm::ModuleAnalysisManager &AM);
 };
 
 struct CreateInstrProfRuntimeHookPass : public llvm::PassInfoMixin<CreateInstrProfRuntimeHookPass> {
