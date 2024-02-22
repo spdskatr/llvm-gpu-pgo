@@ -104,9 +104,6 @@ PreservedAnalyses IncrementToWarpBallotPass::run(Module &M, ModuleAnalysisManage
                     auto ID = Call->getIntrinsicID();
                     if (ID == Intrinsic::instrprof_increment) {
                         Targets.emplace_back(Call, ConstantInt::get(Int64Ty, 1));
-                    // TODO: Right now step increments aren't handled correctly
-                    // since it doesn't take into account that threads could
-                    // have different values. Will probably need some shfls
                     } else if (ID == Intrinsic::instrprof_increment_step) {
                         Targets.emplace_back(Call, Call->getArgOperand(4));
                     }
