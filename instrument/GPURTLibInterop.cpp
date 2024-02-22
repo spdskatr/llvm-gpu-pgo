@@ -67,18 +67,16 @@ static void insertGPUProfDump(Module &M) {
     }
 }
 
-PreservedAnalyses instrumentHostCode(Module &M, ModuleAnalysisManager &AM) {
+static void instrumentHostCode(Module &M) {
     insertRegisterVar(M);
     insertGPUProfDump(M);
-    return PreservedAnalyses::all();
 }
 
 PreservedAnalyses GPURTLibInteropPass::run(Module &M, ModuleAnalysisManager &AM) {
-    PreservedAnalyses pa = PreservedAnalyses::all();
     if (M.getTargetTriple() != "amdgcn-amd-amdhsa") {
         // We assume host target
-        pa.intersect(instrumentHostCode(M, AM));
+        instrumentHostCode(M);
         errs() << "Added host hooks for getting profdata\n";
     }
-    return pa;
+    return PreservedAnalyses::all();
 }
