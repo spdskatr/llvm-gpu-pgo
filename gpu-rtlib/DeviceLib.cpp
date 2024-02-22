@@ -1,11 +1,4 @@
-#include <stdlib.h>
 #define __HIP_PLATFORM_AMD__
-#include <assert.h>
-#include <stdio.h>
-#include <stdint.h>
-#include "hip/hip_runtime_api.h"
-#include "hip/hip_runtime.h"
-#include "hip/driver_types.h"
 #include "RTLib.h"
 
 #define Loc __llvm_gpuprof_loc
@@ -16,8 +9,6 @@
 #define PROF_NAME_STOP INSTR_PROF_SECT_STOP(INSTR_PROF_NAME_COMMON)
 #define PROF_CNTS_START INSTR_PROF_SECT_START(INSTR_PROF_CNTS_COMMON)
 #define PROF_CNTS_STOP INSTR_PROF_SECT_STOP(INSTR_PROF_CNTS_COMMON)
-
-#define HIP_ASSERT(x) (assert((x)==hipSuccess))
 
 // Instead of relying on the registration functions, we can directly get the
 // size of the sections by using the addresses of special symbols that the
