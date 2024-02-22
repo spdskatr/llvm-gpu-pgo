@@ -9,53 +9,33 @@
 #include "RTLib.h"
 
 #define Loc __llvm_gpuprof_loc
+#include "profile/InstrProfData.inc"
+#define PROF_DATA_START INSTR_PROF_SECT_START(INSTR_PROF_DATA_COMMON)
+#define PROF_DATA_STOP INSTR_PROF_SECT_STOP(INSTR_PROF_DATA_COMMON)
+#define PROF_NAME_START INSTR_PROF_SECT_START(INSTR_PROF_NAME_COMMON)
+#define PROF_NAME_STOP INSTR_PROF_SECT_STOP(INSTR_PROF_NAME_COMMON)
+#define PROF_CNTS_START INSTR_PROF_SECT_START(INSTR_PROF_CNTS_COMMON)
+#define PROF_CNTS_STOP INSTR_PROF_SECT_STOP(INSTR_PROF_CNTS_COMMON)
+
 #define HIP_ASSERT(x) (assert((x)==hipSuccess))
 
-template <typename T>
-static __device__ T *getMinAddr(T *A1, T *A2) {
-  return A1 < A2 ? A1 : A2;
-}
+// Instead of relying on the registration functions, we can directly get the
+// size of the sections by using the addresses of special symbols that the
+// linker emits for the beginning and end of each section. This is what the
+// rest of the source code cryptically refers to as "the linker magic".
+extern __device__ __llvm_profile_data PROF_DATA_START;
+extern __device__ __llvm_profile_data PROF_DATA_STOP;
+extern __device__ char PROF_NAME_START;
+extern __device__ char PROF_NAME_STOP;
+extern __device__ char PROF_CNTS_START;
+extern __device__ char PROF_CNTS_STOP;
 
-template <typename T>
-static __device__ T *getMaxAddr(T *A1, T *A2) {
-  return A1 > A2 ? A1 : A2;
-}
-
-__device__ ProfDataLocs Loc[1];
-
-extern "C"
-__device__ void __llvm_profile_register_function(void *Data_) {
-    // We assume that counters are have size uint64
-    // (i.e. __llvm_profile_counter_entry_size() == sizeof(uint64_t))
-    // This is probably true for any future llvm version that rocm supports
-    __llvm_profile_data *Data = static_cast<__llvm_profile_data *>(Data_);
-    if (!Loc[0].DataFirst) {
-        Loc[0].DataFirst = Data;
-        Loc[0].DataLast = Data + 1;
-        Loc[0].CountersFirst = static_cast<char *>(Data_) + Data->CounterPtr;
-        Loc[0].CountersLast =
-            Loc[0].CountersFirst + Data->NumCounters * sizeof(uint64_t);
-    } else {
-        Loc[0].DataFirst = getMinAddr(Loc[0].DataFirst, Data);
-        Loc[0].CountersFirst = getMinAddr(
-            Loc[0].CountersFirst, static_cast<char *>(Data_) + Data->CounterPtr);
-
-        Loc[0].DataLast = getMaxAddr(Loc[0].DataLast, Data + 1);
-        Loc[0].CountersLast = getMaxAddr(
-            Loc[0].CountersLast,
-            static_cast<char *>(Data_) + Data->CounterPtr + Data->NumCounters * sizeof(uint64_t));
-    }
-}
-
-extern "C"
-__device__ void __llvm_profile_register_names_function(void *NamesStart_, uint64_t NamesSize) {
-    char *NamesStart = static_cast<char *>(NamesStart_);
-    if (!Loc[0].NamesFirst) {
-        Loc[0].NamesFirst = NamesStart;
-        Loc[0].NamesLast = NamesStart + NamesSize;
-        return;
-    }
-    Loc[0].NamesFirst = getMinAddr(Loc[0].NamesFirst, NamesStart);
-    Loc[0].NamesLast =
-        getMaxAddr(Loc[0].NamesLast, NamesStart + NamesSize);
-}
+// This symbol gets registered by GPURTLibInteropPass and then
+__device__ ProfDataLocs Loc[1] = {
+    &PROF_DATA_START,
+    &PROF_DATA_STOP,
+    &PROF_NAME_START,
+    &PROF_NAME_STOP,
+    &PROF_CNTS_START,
+    &PROF_CNTS_STOP
+};
