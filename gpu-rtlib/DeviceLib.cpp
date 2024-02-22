@@ -24,12 +24,6 @@ static __device__ T *getMaxAddr(T *A1, T *A2) {
 __device__ ProfDataLocs Loc[1];
 
 extern "C"
-__device__ unsigned __llvm_gpuprof_elect() {
-  unsigned long long mask = __ballot(1);
-  return __lane_id() == __ffsll(mask) - 1 ? __popcll(mask) : 0;
-}
-
-extern "C"
 __device__ void __llvm_profile_register_function(void *Data_) {
     // We assume that counters are have size uint64
     // (i.e. __llvm_profile_counter_entry_size() == sizeof(uint64_t))
