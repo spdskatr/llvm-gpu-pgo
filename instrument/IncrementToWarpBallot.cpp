@@ -21,12 +21,17 @@
 
 using namespace llvm;
 
-// Unfortunately I have to implement everything here by hand
-// (pseudo-)code for replacement code:
-//  unsigned long long mask = __ballot(1);
-//  if (__lane_id() == __ctzll(mask)) {
-//      atomicAdd(&deviceCounter, __popcll(mask));
-//  }
+/*
+Unfortunately I have to implement everything here by hand 
+(pseudo-)code for replacement code:
+if (Val) {
+    unsigned long long mask = __ballot(1);
+    if (__lane_id() == __ctzll(mask)) {
+        atomicAdd(&deviceCounter, __popcll(mask));
+    }
+}
+NOTE: We assume that Val is either zero or one
+*/
 static void modifyIncrement(Module &M, CallInst *Call, Value *Val) {
     Type *Int64Ty = Type::getInt64Ty(M.getContext());
     Type *Int32Ty = Type::getInt32Ty(M.getContext());
@@ -42,18 +47,28 @@ static void modifyIncrement(Module &M, CallInst *Call, Value *Val) {
     Value *ExecReg = MetadataAsValue::get(M.getContext(), 
         MDNode::get(M.getContext(), {MDString::get(M.getContext(), "exec")}));
     // Get int -1
+    Constant *LongZero = ConstantInt::get(Int64Ty, 0);
     Constant *IntZero = ConstantInt::get(Int32Ty, 0);
     Constant *IntNeg1 = ConstantInt::get(Int32Ty, -1);
 
     // Split up blocks around instruction
     BasicBlock *Before = Call->getParent();
-    BasicBlock *B = Before->splitBasicBlock(Call, "instrprof");
+    BasicBlock *Elect = Before->splitBasicBlock(Call, "elect");
+    BasicBlock *B = Elect->splitBasicBlock(Call, "instrprof");
     BasicBlock *After = B->splitBasicBlock(Call->getNextNode(), Before->getName() + ".a");
 
+    // BEFORE block
+    // Branch to elect block iff val is 1
+    Instruction *BeforeTerm = Before->getTerminator();
+    IRBuilder<> BeforeB{BeforeTerm};
+    BeforeB.CreateCondBr(BeforeB.CreateICmpNE(Val, LongZero), Elect, After);
+    BeforeTerm->eraseFromParent();
+
+    // ELECT block
     // Make a conditional branch to the increment instruction for
     // only the elected thread
-    Instruction *BeforeTerm = Before->getTerminator();
-    IRBuilder<> IRB{BeforeTerm};
+    Instruction *ElectTerm = Elect->getTerminator();
+    IRBuilder<> IRB{ElectTerm};
     // Elect a leader
     Value *Mask = IRB.CreateCall(ReadReg, { ExecReg });
     Value *LaneId = IRB.CreateCall(MbcntHi, { IntNeg1, IRB.CreateCall(MbcntLo, { IntNeg1, IntZero }) });
@@ -64,19 +79,19 @@ static void modifyIncrement(Module &M, CallInst *Call, Value *Val) {
     // If leader, branch to profiling block
     IRB.CreateCondBr(IsLeader, B, After);
     // Now that we have our terminator we can erase the original one
-    BeforeTerm->eraseFromParent();
+    ElectTerm->eraseFromParent();
 
+    // INSTRPROF block
     // Modify the increment intrinsic call
     auto IncrStep = Intrinsic::getDeclaration(&M, Intrinsic::instrprof_increment_step);
     IRBuilder<> LeaderB{B->getTerminator()};
     CallInst *Count = LeaderB.CreateCall(CTPOP, { Mask });
-    Value *NewVal = LeaderB.CreateMul(Val, Count);
     LeaderB.CreateCall(IncrStep, {
         Call->getArgOperand(0), 
         Call->getArgOperand(1), 
         Call->getArgOperand(2),
         Call->getArgOperand(3),
-        NewVal});
+        Count});
     Call->eraseFromParent();
 }
 
@@ -93,8 +108,8 @@ PreservedAnalyses IncrementToWarpBallotPass::run(Module &M, ModuleAnalysisManage
                     // TODO: Right now step increments aren't handled correctly
                     // since it doesn't take into account that threads could
                     // have different values. Will probably need some shfls
-                    //} else if (ID == Intrinsic::instrprof_increment_step) {
-                    //    Targets.emplace_back(Call, Call->getArgOperand(4));
+                    } else if (ID == Intrinsic::instrprof_increment_step) {
+                        Targets.emplace_back(Call, Call->getArgOperand(4));
                     }
                 }
             }
