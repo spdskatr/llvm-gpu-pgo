@@ -19,34 +19,39 @@ using namespace llvm;
 // __hipRegisterVar(<handle>, __llvm_gpuprof_loc, "__llvm_gpuprof_loc", 
 //                  "__llvm_gpuprof_loc", 1, 8, 0, 0)
 static void insertRegisterVar(Module &M) {
-    auto *RegisterVarF = M.getFunction(HIP_REGISTER_VAR_NAME);
     auto *RegisterGlobalsF = M.getFunction(HIP_REGISTER_GLOBALS_NAME);
+    if (!RegisterGlobalsF) {
+        errs() << "Module " << M.getName() << " is probably not a HIP host module, skipping.\n";
+    } else {
+        auto *RegisterVarF = M.getFunction(HIP_REGISTER_VAR_NAME);
 
-    IRBuilder<> IRB{&*RegisterGlobalsF->getEntryBlock().getFirstInsertionPt()};
-    auto *IntTy = IRB.getInt32Ty();
-    auto *SizeTy = IRB.getInt64Ty();
-    auto *PtrTy = Type::getInt64PtrTy(M.getContext());
+        IRBuilder<> IRB{&*RegisterGlobalsF->getEntryBlock().getFirstInsertionPt()};
+        auto *IntTy = IRB.getInt32Ty();
+        auto *SizeTy = IRB.getInt64Ty();
+        auto *PtrTy = Type::getInt64PtrTy(M.getContext());
 
-    // Add global shadow variable for the loc name
-    auto *LocNameVar = IRB.CreateGlobalString(GPUPROF_LOC_NAME);
-    auto *LocVar = new GlobalVariable(
-        M, PtrTy, false, llvm::GlobalValue::ExternalLinkage, 
-        nullptr, GPUPROF_LOC_NAME);
-    LocVar->setExternallyInitialized(true);
+        // Add global shadow variable for the loc name
+        auto *LocNameVar = IRB.CreateGlobalString(GPUPROF_LOC_NAME);
+        auto *LocVar = new GlobalVariable(
+            M, PtrTy, false, llvm::GlobalValue::ExternalLinkage, 
+            nullptr, GPUPROF_LOC_NAME);
+        LocVar->setExternallyInitialized(true);
 
-    // The first argument of __hipRegisterVar stores the GPUBinaryHandle.
-    // See: clang/lib/CodeGen/CGCUDANV.cpp
-    auto *GPUHandle = RegisterGlobalsF->getArg(0);
-    ArrayRef<Value *> args{{ 
-        GPUHandle, 
-        LocVar, 
-        LocNameVar, 
-        LocNameVar, 
-        ConstantInt::get(IntTy, 1),
-        ConstantInt::get(SizeTy, 8),
-        ConstantInt::get(IntTy, 0),
-        ConstantInt::get(IntTy, 0) }};
-    IRB.CreateCall(RegisterVarF, args);
+        // The first argument of __hipRegisterVar stores the GPUBinaryHandle.
+        // See: clang/lib/CodeGen/CGCUDANV.cpp
+        auto *GPUHandle = RegisterGlobalsF->getArg(0);
+        ArrayRef<Value *> args{{ 
+            GPUHandle, 
+            LocVar, 
+            LocNameVar, 
+            LocNameVar, 
+            ConstantInt::get(IntTy, 1),
+            ConstantInt::get(SizeTy, 8),
+            ConstantInt::get(IntTy, 0),
+            ConstantInt::get(IntTy, 0) }};
+        IRB.CreateCall(RegisterVarF, args);
+        errs() << "Inserted a registration call for HIP host module " << M.getName() << "\n";
+    }
 }
 
 // After each kernel call, create a call to __llvm_gpuprof_sync()
@@ -76,7 +81,6 @@ PreservedAnalyses GPURTLibInteropPass::run(Module &M, ModuleAnalysisManager &AM)
     if (M.getTargetTriple() != "amdgcn-amd-amdhsa") {
         // We assume host target
         instrumentHostCode(M);
-        errs() << "Added host hooks for getting profdata\n";
     }
     return PreservedAnalyses::all();
 }
