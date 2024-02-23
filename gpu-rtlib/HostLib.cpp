@@ -28,18 +28,17 @@ ProfDataLocs *__llvm_gpuprof_loc = init_loc();
 
 // Device addresses for profiling data. Registered with device side by GPUInstrPass.
 ProfDataLocs DeviceLoc;
-// Host addresses for profiling data.
-ProfDataLocs HostLoc;
-
+// Proxy device addresses for profiling data.
 // Some GPUs don't like you directly copying from arbitrary memory locations
 // back into the host. We create a proxy buffer on the device and perform two
 // memcpys instead. 
-static void memcpyArbitraryDeviceToHost(void *hostPtr, const void *devPtr, size_t size) {
-    void *proxyPtr;
-    HIP_ASSERT(hipMalloc(&proxyPtr, size));
+ProfDataLocs ProxyLoc;
+// Host addresses for profiling data.
+ProfDataLocs HostLoc;
+
+static void memcpyArbitraryDeviceToHost(void *hostPtr, void *proxyPtr, const void *devPtr, size_t size) {
     HIP_ASSERT(hipMemcpy(proxyPtr, devPtr, size, hipMemcpyDeviceToDevice));
     HIP_ASSERT(hipMemcpy(hostPtr, proxyPtr, size, hipMemcpyDeviceToHost));
-    HIP_ASSERT(hipFree(proxyPtr));
 }
 
 static void debugRes(ProfDataLocs& res) {
@@ -85,10 +84,7 @@ static void fixRelativePositions() {
     }
 }
 
-static void fetchLocs() {
-    HIP_ASSERT(hipMemcpyFromSymbol(&DeviceLoc, __llvm_gpuprof_loc,
-        sizeof(ProfDataLocs), 0, hipMemcpyDeviceToHost));
-    // Also allocate memory for HostLoc
+static void allocateLocs() {
     size_t DataSize = DeviceLoc.DataLast - DeviceLoc.DataFirst;
     size_t NamesSize = DeviceLoc.NamesLast - DeviceLoc.NamesFirst;
     size_t CountersSize = DeviceLoc.CountersLast - DeviceLoc.CountersFirst;
@@ -100,20 +96,24 @@ static void fetchLocs() {
     HostLoc.CountersFirst = static_cast<char *>(malloc(CountersSize * sizeof(char)));
     HostLoc.CountersLast = HostLoc.CountersFirst + CountersSize;
 
-    // Now that we have profdata, we should initialise compiler-rt now
-    __llvm_profile_initialize_file();
+    HIP_ASSERT(hipMalloc(&ProxyLoc.DataFirst, DataSize * sizeof(__llvm_profile_data)));
+    ProxyLoc.DataLast = ProxyLoc.DataFirst + DataSize;
+    HIP_ASSERT(hipMalloc(&ProxyLoc.NamesFirst, NamesSize * sizeof(char)));
+    ProxyLoc.NamesLast = ProxyLoc.NamesFirst + NamesSize;
+    HIP_ASSERT(hipMalloc(&ProxyLoc.CountersFirst, CountersSize * sizeof(char)));
+    ProxyLoc.CountersLast = ProxyLoc.CountersFirst + CountersSize;
 }
 
 static void fetchData() {
     assert(HostLoc.DataFirst && "Locs were not fetched!");
     memcpyArbitraryDeviceToHost(
-        HostLoc.DataFirst, DeviceLoc.DataFirst,
+        HostLoc.DataFirst, ProxyLoc.DataFirst, DeviceLoc.DataFirst,
         distanceInBytes(HostLoc.DataFirst, HostLoc.DataLast));
     memcpyArbitraryDeviceToHost(
-        HostLoc.NamesFirst, DeviceLoc.NamesFirst,
+        HostLoc.NamesFirst, ProxyLoc.NamesFirst, DeviceLoc.NamesFirst,
         distanceInBytes(HostLoc.NamesFirst, HostLoc.NamesLast));
     memcpyArbitraryDeviceToHost(
-        HostLoc.CountersFirst, DeviceLoc.CountersFirst,
+        HostLoc.CountersFirst, ProxyLoc.CountersFirst, DeviceLoc.CountersFirst,
         distanceInBytes(HostLoc.CountersFirst, HostLoc.CountersLast));
 
     fixRelativePositions();
@@ -123,8 +123,14 @@ static void fetchData() {
 extern "C"
 void __llvm_gpuprof_sync(void) {
     HIP_ASSERT(hipDeviceSynchronize());
-    if (!DeviceLoc.DataFirst)
-        fetchLocs();
+    if (!DeviceLoc.DataFirst) {
+        // Fetch symbol data to DeviceLoc
+        HIP_ASSERT(hipMemcpyFromSymbol(&DeviceLoc, __llvm_gpuprof_loc,
+            sizeof(ProfDataLocs), 0, hipMemcpyDeviceToHost));
+        allocateLocs();
+        // Now that we have profdata, we should initialise compiler-rt now
+        __llvm_profile_initialize_file();
+    }
     fetchData();
     debugLog();
 }
