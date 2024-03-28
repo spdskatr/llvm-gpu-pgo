@@ -25,6 +25,7 @@ static void insertRegisterVar(Module &M) {
     } else {
         auto *RegisterVarF = M.getFunction(HIP_REGISTER_VAR_NAME);
 
+        // (&*p): Dereference the iterator and then reference the result to get the pointer.
         IRBuilder<> IRB{&*RegisterGlobalsF->getEntryBlock().getFirstInsertionPt()};
         auto *IntTy = IRB.getInt32Ty();
         auto *SizeTy = IRB.getInt64Ty();
