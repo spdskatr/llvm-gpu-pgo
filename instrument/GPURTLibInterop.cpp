@@ -1,5 +1,7 @@
+#include <llvm/IR/Constants.h>
 #include <llvm/IR/DerivedTypes.h>
 #include <llvm/IR/GlobalValue.h>
+#include <llvm/IR/GlobalVariable.h>
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/InstIterator.h>
 #include <llvm/IR/PassManager.h>
@@ -73,6 +75,20 @@ static void insertGPUProfDump(Module &M) {
     }
 }
 
+// Replicate the COMDAT variable created by the GPU instrumentation on the host side.
+// NOTE: We don't know the actual value of the global variable on the GPU side
+static void insertRawVersionVar(Module &M) {
+    const StringRef RawVersionName{INSTR_PROF_QUOTE(INSTR_PROF_RAW_VERSION_VAR)};
+    IntegerType *IntTy = Type::getInt64Ty(M.getContext());
+    uint64_t Version = INSTR_PROF_RAW_VERSION | VARIANT_MASK_IR_PROF;
+    GlobalVariable *Symbol = new GlobalVariable{M, IntTy, true, 
+        llvm::GlobalValue::WeakAnyLinkage, 
+        ConstantInt::get(IntTy,  Version),
+        RawVersionName};
+    Symbol->setVisibility(llvm::GlobalValue::HiddenVisibility);
+    // TODO: COMDAT
+}
+
 static void instrumentHostCode(Module &M) {
     insertRegisterVar(M);
     insertGPUProfDump(M);
@@ -80,8 +96,12 @@ static void instrumentHostCode(Module &M) {
 
 PreservedAnalyses GPURTLibInteropPass::run(Module &M, ModuleAnalysisManager &AM) {
     if (M.getTargetTriple() != "amdgcn-amd-amdhsa") {
-        // We assume host target
-        instrumentHostCode(M);
+        if (getenv("LLVM_GPUPGO_USE")) {
+            errs() << "Host-side instrumentation skipped; profile detected.\n";
+        } else {
+            // Not the device target, so probably the host target. Apply host-side instrumentation
+            instrumentHostCode(M);
+        }
     }
     return PreservedAnalyses::all();
 }

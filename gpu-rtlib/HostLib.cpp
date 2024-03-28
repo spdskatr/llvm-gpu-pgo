@@ -5,6 +5,7 @@
 #define __HIP_PLATFORM_AMD__
 #include "hip/hip_runtime_api.h"
 #include "RTLib.h"
+#include "profile/InstrProfData.inc"
 
 #ifdef __LLVM_GPUPROF_DEBUG
 #define DEBUG_PRINTF(x...) fprintf(stderr, x)
@@ -25,6 +26,14 @@ extern "C" int __llvm_profile_write_file(void);
 // Define the host symbol that gets registered with DeviceLib symbol by the
 // GPUInstrPass.
 ProfDataLocs *__llvm_gpuprof_loc = init_loc();
+
+// Define the version symbol on the host-side that tells compiler-rt what type
+// of instrumentation profile is being written.
+// NOTE: We hardcode the version symbol here. If we decide to use any of the
+// fancy PGOInstrumentationGen features then we will need to read the actual
+// value from the device.
+__attribute__ ((visibility("hidden"))) __attribute__((weak)) 
+uint64_t INSTR_PROF_RAW_VERSION_VAR = INSTR_PROF_RAW_VERSION | VARIANT_MASK_IR_PROF;
 
 // Device addresses for profiling data. Registered with device side by GPUInstrPass.
 ProfDataLocs DeviceLoc;

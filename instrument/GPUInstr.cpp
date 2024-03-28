@@ -4,6 +4,7 @@
 #include <llvm/Pass.h>
 #include <llvm/ProfileData/InstrProf.h>
 #include <llvm/Support/raw_ostream.h>
+#include <llvm/Support/VirtualFileSystem.h>
 #include <llvm/Transforms/Instrumentation/PGOInstrumentation.h>
 #include <llvm/Transforms/Instrumentation/InstrProfiling.h>
 #include <llvm/Transforms/Scalar/SROA.h>
@@ -51,27 +52,32 @@ PreservedAnalyses GPUInstrPass::run(Module &M, ModuleAnalysisManager &AM) {
         MPM.addPass(std::move(MIWP));
         MPM.addPass(GlobalDCEPass{});
 
-        // Insert intrinsics
-        // NOTE: LLVM was modified to change bitcasts to addrspace casts
-        MPM.addPass(PGOInstrumentationGen{});
-        // Make increments more efficient
-        MPM.addPass(IncrementToWarpBallotPass{});
-        // Deactivate the LLVM 17 bug
-        MPM.addPass(CreateInstrProfRuntimeHookPass{});
-        // Lower intrinsics
-        // NOTE: LLVM was modified to change bitcasts to addrspace casts
-        MPM.addPass(InstrProfiling{InstrProfOptions {
-            .NoRedZone = false,
-            .DoCounterPromotion = false,
-            .Atomic = true,
-            .UseBFIInPromotion = false
-        }});
+        if (char *Filename = getenv("LLVM_GPUPGO_USE")) {
+            errs() << "Using " << Filename << " as profile file for PGOInstrumentationUse\n";
+            MPM.addPass(PGOInstrumentationUse{Filename});
+        } else {
+            // Insert intrinsics
+            // NOTE: LLVM was modified to change bitcasts to addrspace casts
+            MPM.addPass(PGOInstrumentationGen{});
+            // Make increments more efficient
+            MPM.addPass(IncrementToWarpBallotPass{});
+            // Deactivate the LLVM 17 bug
+            MPM.addPass(CreateInstrProfRuntimeHookPass{});
+            // Lower intrinsics
+            // NOTE: LLVM was modified to change bitcasts to addrspace casts
+            MPM.addPass(InstrProfiling{InstrProfOptions {
+                .NoRedZone = false,
+                .DoCounterPromotion = false,
+                .Atomic = true,
+                .UseBFIInPromotion = false
+            }});
+        }
         // Run verifier
         MPM.addPass(VerifierPass{});
 
         // Execute pipeline
         PreservedAnalyses pa = MPM.run(M, AM);
-        errs() << "PGO instrumentation completed and verified!\n";
+        errs() << "PGO pass completed!\n";
         return pa;
     }
     return PreservedAnalyses::all();
