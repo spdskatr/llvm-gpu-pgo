@@ -14,6 +14,7 @@
 #include <llvm/Transforms/InstCombine/InstCombine.h>
 #include <llvm/IR/PassManager.h>
 #include <llvm/IR/Verifier.h>
+#include <llvm/Analysis/ProfileSummaryInfo.h>
 #include <llvm/Analysis/CGSCCPassManager.h>
 #include <llvm/Analysis/InlineAdvisor.h>
 #include <llvm/Passes/OptimizationLevel.h>
@@ -55,6 +56,7 @@ PreservedAnalyses GPUInstrPass::run(Module &M, ModuleAnalysisManager &AM) {
         if (char *Filename = getenv("LLVM_GPUPGO_USE")) {
             errs() << "Using " << Filename << " as profile file for PGOInstrumentationUse\n";
             MPM.addPass(PGOInstrumentationUse{Filename});
+            MPM.addPass(RequireAnalysisPass<ProfileSummaryAnalysis, Module>{});
         } else {
             // Insert intrinsics
             // NOTE: LLVM was modified to change bitcasts to addrspace casts
