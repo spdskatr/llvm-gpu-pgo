@@ -1,6 +1,8 @@
 #include <llvm/IR/BasicBlock.h>
 #include <llvm/IR/GlobalValue.h>
 #include <llvm/IR/GlobalVariable.h>
+#include <llvm/IR/IntrinsicInst.h>
+#include <llvm/IR/Intrinsics.h>
 #include <llvm/Pass.h>
 #include <llvm/ProfileData/InstrProf.h>
 #include <llvm/Support/raw_ostream.h>
@@ -63,7 +65,7 @@ PreservedAnalyses GPUInstrPass::run(Module &M, ModuleAnalysisManager &AM) {
             // NOTE: LLVM was modified to change bitcasts to addrspace casts
             MPM.addPass(PGOInstrumentationGen{});
             // Make increments more efficient
-            MPM.addPass(IncrementToWarpBallotPass{});
+            //MPM.addPass(IncrementToWarpBallotPass{});
             // Deactivate the LLVM 17 bug
             MPM.addPass(CreateInstrProfRuntimeHookPass{});
             // Lower intrinsics
@@ -80,6 +82,22 @@ PreservedAnalyses GPUInstrPass::run(Module &M, ModuleAnalysisManager &AM) {
 
         // Execute pipeline
         PreservedAnalyses pa = MPM.run(M, AM);
+
+        // TODO: Remove this
+        for (Function &F : M) for (BasicBlock &B : F) for (Instruction &I : B) {
+            if (IntrinsicInst *Call = dyn_cast<IntrinsicInst>(&I)) {
+                if (Call->getIntrinsicID() == Intrinsic::stacksave) {
+                    errs() << "Stacksave found!\n";
+                    I.dump();
+                    errs() << "Block:\n";
+                    B.dump();
+                    errs() << "Function:\n";
+                    F.dump();
+                }
+            }
+        }
+        errs() << "Stacksave where\n";
+
         errs() << "PGO pass completed!\n";
         return pa;
     }
