@@ -37,6 +37,7 @@ PreservedAnalyses GPUInstrPass::run(Module &M, ModuleAnalysisManager &AM) {
         // This replicates the setup of addPGOInstrPasses before the
         // PGOInstrumentationGen pass.
         InlineParams IP;
+        IP.DefaultThreshold = 0;
         ModuleInlinerWrapperPass MIWP{IP, true, 
             InlineContext{
                 .LTOPhase = ThinOrFullLTOPhase::ThinLTOPreLink, 
