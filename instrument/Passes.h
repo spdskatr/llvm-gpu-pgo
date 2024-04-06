@@ -17,3 +17,7 @@ struct GPURTLibInteropPass : public llvm::PassInfoMixin<GPURTLibInteropPass> {
 struct GPUInstrPass : public llvm::PassInfoMixin<GPUInstrPass> {
     llvm::PreservedAnalyses run(llvm::Module &M, llvm::ModuleAnalysisManager &AM);
 };
+
+struct RelocateProfileInstsToAfterAllocaPass : public llvm::PassInfoMixin<RelocateProfileInstsToAfterAllocaPass> {
+    llvm::PreservedAnalyses run(llvm::Module &M, llvm::ModuleAnalysisManager &AM);
+};

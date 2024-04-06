@@ -64,8 +64,10 @@ PreservedAnalyses GPUInstrPass::run(Module &M, ModuleAnalysisManager &AM) {
             // Insert intrinsics
             // NOTE: LLVM was modified to change bitcasts to addrspace casts
             MPM.addPass(PGOInstrumentationGen{});
+            // Hoist increments to past allocas
+            MPM.addPass(RelocateProfileInstsToAfterAllocaPass{});
             // Make increments more efficient
-            //MPM.addPass(IncrementToWarpBallotPass{});
+            MPM.addPass(IncrementToWarpBallotPass{});
             // Deactivate the LLVM 17 bug
             MPM.addPass(CreateInstrProfRuntimeHookPass{});
             // Lower intrinsics
