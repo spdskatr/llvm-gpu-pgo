@@ -1,0 +1,18 @@
+--- a/intern/cycles/device/hip/device_impl.cpp
++++ b/intern/cycles/device/hip/device_impl.cpp
+@@ -261,6 +261,15 @@ string HIPDevice::compile_kernel(const uint kernel_features, const char *name, c
+ #  endif
+   options.append(" --amdgpu-target=").append(arch.c_str());
+
++// Instrumentation mode
++  if (getenv("LLVM_GPUPGO_INSTRUMENT")) {
++    options.append(" -fpass-plugin=/home/ts862/llvm-gpu-pgo/build/instrument/GPUInstrPass.so -L/home/ts862/llvm-gpu-pgo/build/gpu-rtlib -lGPURTLib -lclang_rt.profile -Xoffload-linkeramdgcn-amd-amdhsa /home/ts862/llvm-gpu-pgo/build/gpu-rtlib/rtlib.bc -Xoffload-linkeramdgcn-amd-amdhsa -plugin-opt=-amdgpu-early-inline-all=true -Xoffload-linkeramdgcn-amd-amdhsa -plugin-opt=-amdgpu-function-calls=false -fgpu-rdc");
++  }
++
++  if (getenv("LLVM_GPUPGO_USE")) {
++      options.append(" -fpass-plugin=/home/ts862/llvm-gpu-pgo/build/instrument/GPUInstrPass.so");
++  }
++
+   const string include_path = source_path;
+   const string fatbin_file = string_printf(
+       "cycles_%s_%s_%s", name, arch.c_str(), kernel_md5.c_str());
