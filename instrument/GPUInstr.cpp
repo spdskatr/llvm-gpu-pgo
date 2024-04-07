@@ -30,9 +30,6 @@ using namespace llvm;
 PreservedAnalyses GPUInstrPass::run(Module &M, ModuleAnalysisManager &AM) {
     // Only run PGO instrumentation if the target is GPU
     if (M.getTargetTriple() == "amdgcn-amd-amdhsa") {
-        errs() << "Running PGO instrumentation on module " << M.getModuleIdentifier() 
-            << " with device target " << M.getTargetTriple() << "\n";
-
         // Prepare pipeline
         ModulePassManager MPM;
         // Preparation
@@ -61,6 +58,8 @@ PreservedAnalyses GPUInstrPass::run(Module &M, ModuleAnalysisManager &AM) {
             MPM.addPass(PGOInstrumentationUse{Filename});
             MPM.addPass(RequireAnalysisPass<ProfileSummaryAnalysis, Module>{});
         } else {
+            errs() << "Running PGO instrumentation on module " << M.getModuleIdentifier() 
+                << " with device target " << M.getTargetTriple() << "\n";
             // Insert intrinsics
             // NOTE: LLVM was modified to change bitcasts to addrspace casts
             MPM.addPass(PGOInstrumentationGen{});
@@ -84,22 +83,6 @@ PreservedAnalyses GPUInstrPass::run(Module &M, ModuleAnalysisManager &AM) {
 
         // Execute pipeline
         PreservedAnalyses pa = MPM.run(M, AM);
-
-        // TODO: Remove this
-        for (Function &F : M) for (BasicBlock &B : F) for (Instruction &I : B) {
-            if (IntrinsicInst *Call = dyn_cast<IntrinsicInst>(&I)) {
-                if (Call->getIntrinsicID() == Intrinsic::stacksave) {
-                    errs() << "Stacksave found!\n";
-                    I.dump();
-                    errs() << "Block:\n";
-                    B.dump();
-                    errs() << "Function:\n";
-                    F.dump();
-                }
-            }
-        }
-        errs() << "Stacksave where\n";
-
         errs() << "PGO pass completed!\n";
         return pa;
     }
