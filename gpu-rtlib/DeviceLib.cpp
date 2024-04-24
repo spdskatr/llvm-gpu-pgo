@@ -13,7 +13,7 @@
 // Instead of relying on the registration functions, we can directly get the
 // size of the sections by using the addresses of special symbols that the
 // linker emits for the beginning and end of each section. This is what the
-// rest of the source code cryptically refers to as "the linker magic".
+// LLVM source code cryptically refers to as "the linker magic".
 extern __device__ __llvm_profile_data PROF_DATA_START;
 extern __device__ __llvm_profile_data PROF_DATA_STOP;
 extern __device__ char PROF_NAME_START;
