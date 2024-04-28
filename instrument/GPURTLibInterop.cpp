@@ -14,7 +14,6 @@ using namespace llvm;
 #define HIP_MODULE_DTOR_NAME "__hip_module_dtor"
 #define HIP_UNREGISTER_FATBIN_NAME "__hipUnregisterFatBinary"
 #define HIP_REGISTER_GLOBALS_NAME "__hip_register_globals"
-#define HIP_LAUNCH_KERNEL_NAME "hipLaunchKernel"
 // These are the names we defined. Note that the names may be repeated in
 // other places
 #define GPUPROF_LOC_NAME "__llvm_gpuprof_loc"
@@ -61,24 +60,8 @@ static void insertRegisterVar(Module &M) {
     }
 }
 
-// After each kernel call, create a call to __llvm_gpuprof_sync()
-static void insertGPUProfDump(Module &M) {
-    FunctionType *FT = FunctionType::get(Type::getVoidTy(M.getContext()), false);
-    Function *Sync = Function::Create(FT, llvm::GlobalValue::ExternalLinkage, 0u, GPUPROF_SYNC_NAME, &M);
-    for (Function &F : M) {
-        for (Instruction &I : instructions(F)) {
-            if (CallInst *C = dyn_cast<CallInst>(&I)) {
-                Function *Callee = C->getCalledFunction();
-                if (Callee && Callee->getName() == HIP_LAUNCH_KERNEL_NAME) {
-                    IRBuilder IRB{C->getInsertionPointAfterDef()};
-                    IRB.CreateCall(Sync, {});
-                    errs() << "Inserted a profile sync point for kernel call " << C->getArgOperand(0)->getName() << "\n";
-                }
-            }
-        }
-    }
-}
-
+// Before the HIP module gets deregistered, insert a call to dump all of the
+// profile data to a file
 static void insertDumpAtDeregister(Module &M) {
     FunctionType *FT = FunctionType::get(Type::getVoidTy(M.getContext()), false);
     Function *Sync = Function::Create(FT, llvm::GlobalValue::ExternalLinkage, 0u, GPUPROF_SYNC_NAME, &M);
@@ -94,12 +77,10 @@ static void insertDumpAtDeregister(Module &M) {
             }
         }
     }
-    TargetFunc->dump();
 }
 
 static void instrumentHostCode(Module &M) {
     insertRegisterVar(M);
-    //insertGPUProfDump(M);
     insertDumpAtDeregister(M);
 }
 

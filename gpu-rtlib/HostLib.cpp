@@ -25,7 +25,7 @@ extern "C" int __llvm_profile_write_file(void);
 
 // Define the host symbol that gets registered with DeviceLib symbol by the
 // GPUInstrPass.
-ProfDataLocs *__llvm_gpuprof_loc = init_loc();
+ProfDataLocs *__llvm_gpuprof_loc;
 
 // Define the version symbol on the host-side that tells compiler-rt what type
 // of instrumentation profile is being written.
@@ -147,13 +147,4 @@ void __llvm_gpuprof_sync(void) {
     fetchData();
     debugLog();
     dump_data_to_file();
-}
-
-ProfDataLocs *init_loc() {
-    // We can put initialisation code here, this will always run after the main
-    // hip module gets initialised
-    // Note: We can't atexit and then read profiledata here, by that time the
-    // HIP module would have been deregistered already
-    //atexit(dump_data_to_file);
-    return nullptr;
 }
