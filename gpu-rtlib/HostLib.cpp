@@ -128,6 +128,10 @@ static void fetchData() {
     fixRelativePositions();
 }
 
+void dump_data_to_file() {
+    assert(!__llvm_profile_write_file());
+} 
+
 // Sync hook run after each kernel call
 extern "C"
 void __llvm_gpuprof_sync(void) {
@@ -142,17 +146,14 @@ void __llvm_gpuprof_sync(void) {
     }
     fetchData();
     debugLog();
+    dump_data_to_file();
 }
-
-void dump_data_to_file() {
-    assert(!__llvm_profile_write_file());
-} 
 
 ProfDataLocs *init_loc() {
     // We can put initialisation code here, this will always run after the main
     // hip module gets initialised
     // Note: We can't atexit and then read profiledata here, by that time the
     // HIP module would have been deregistered already
-    atexit(dump_data_to_file);
+    //atexit(dump_data_to_file);
     return nullptr;
 }

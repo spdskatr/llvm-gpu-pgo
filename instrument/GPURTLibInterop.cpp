@@ -6,10 +6,13 @@
 #include <llvm/IR/InstIterator.h>
 #include <llvm/IR/PassManager.h>
 #include <llvm/ProfileData/InstrProf.h>
+#include <stdatomic.h>
 #include "Passes.h"
 using namespace llvm;
 
 #define HIP_REGISTER_VAR_NAME "__hipRegisterVar"
+#define HIP_MODULE_DTOR_NAME "__hip_module_dtor"
+#define HIP_UNREGISTER_FATBIN_NAME "__hipUnregisterFatBinary"
 #define HIP_REGISTER_GLOBALS_NAME "__hip_register_globals"
 #define HIP_LAUNCH_KERNEL_NAME "hipLaunchKernel"
 // These are the names we defined. Note that the names may be repeated in
@@ -76,9 +79,28 @@ static void insertGPUProfDump(Module &M) {
     }
 }
 
+static void insertDumpAtDeregister(Module &M) {
+    FunctionType *FT = FunctionType::get(Type::getVoidTy(M.getContext()), false);
+    Function *Sync = Function::Create(FT, llvm::GlobalValue::ExternalLinkage, 0u, GPUPROF_SYNC_NAME, &M);
+    Function *TargetFunc = M.getFunction(HIP_MODULE_DTOR_NAME);
+    for (Instruction &I : instructions(TargetFunc)) {
+        if (CallInst *C = dyn_cast<CallInst>(&I)) {
+            Function *Callee = C->getCalledFunction();
+            if (Callee && Callee->getName() == HIP_UNREGISTER_FATBIN_NAME) {
+                IRBuilder<> IRB{&I};
+                IRB.CreateCall(Sync, {});
+                errs() << "Inserted a profile sync point at deregister!\n";
+                break;
+            }
+        }
+    }
+    TargetFunc->dump();
+}
+
 static void instrumentHostCode(Module &M) {
     insertRegisterVar(M);
-    insertGPUProfDump(M);
+    //insertGPUProfDump(M);
+    insertDumpAtDeregister(M);
 }
 
 PreservedAnalyses GPURTLibInteropPass::run(Module &M, ModuleAnalysisManager &AM) {
