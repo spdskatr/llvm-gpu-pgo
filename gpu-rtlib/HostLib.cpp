@@ -128,10 +128,6 @@ static void fetchData() {
     fixRelativePositions();
 }
 
-void dump_data_to_file() {
-    assert(!__llvm_profile_write_file());
-} 
-
 // Sync hook run after each kernel call
 extern "C"
 void __llvm_gpuprof_sync(void) {
@@ -146,5 +142,5 @@ void __llvm_gpuprof_sync(void) {
     }
     fetchData();
     debugLog();
-    dump_data_to_file();
+    assert(!__llvm_profile_write_file());
 }
