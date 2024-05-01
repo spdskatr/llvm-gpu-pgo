@@ -23,7 +23,7 @@ extern __device__ char PROF_CNTS_STOP;
 
 // This symbol gets registered by GPURTLibInteropPass and then copied back to
 // the CPU.
-__device__ ProfDataLocs Loc[1] = {
+__device__ ProfDataLocs Loc = {
     &PROF_DATA_START,
     &PROF_DATA_STOP,
     &PROF_NAME_START,

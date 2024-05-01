@@ -23,7 +23,7 @@ static __device__ T *getMaxAddr(T *A1, T *A2) {
   return A1 > A2 ? A1 : A2;
 }
 
-__device__ ProfDataLocs Loc[1];
+__device__ ProfDataLocs Loc;
 
 extern "C"
 __device__ void __llvm_profile_register_function(void *Data_) {
@@ -31,20 +31,20 @@ __device__ void __llvm_profile_register_function(void *Data_) {
     // (i.e. __llvm_profile_counter_entry_size() == sizeof(uint64_t))
     // This is probably true for any future llvm version that rocm supports
     __llvm_profile_data *Data = static_cast<__llvm_profile_data *>(Data_);
-    if (!Loc[0].DataFirst) {
-        Loc[0].DataFirst = Data;
-        Loc[0].DataLast = Data + 1;
-        Loc[0].CountersFirst = static_cast<char *>(Data_) + Data->CounterPtr;
-        Loc[0].CountersLast =
-            Loc[0].CountersFirst + Data->NumCounters * sizeof(uint64_t);
+    if (!Loc.DataFirst) {
+        Loc.DataFirst = Data;
+        Loc.DataLast = Data + 1;
+        Loc.CountersFirst = static_cast<char *>(Data_) + Data->CounterPtr;
+        Loc.CountersLast =
+            Loc.CountersFirst + Data->NumCounters * sizeof(uint64_t);
     } else {
-        Loc[0].DataFirst = getMinAddr(Loc[0].DataFirst, Data);
-        Loc[0].CountersFirst = getMinAddr(
-            Loc[0].CountersFirst, static_cast<char *>(Data_) + Data->CounterPtr);
+        Loc.DataFirst = getMinAddr(Loc.DataFirst, Data);
+        Loc.CountersFirst = getMinAddr(
+            Loc.CountersFirst, static_cast<char *>(Data_) + Data->CounterPtr);
 
-        Loc[0].DataLast = getMaxAddr(Loc[0].DataLast, Data + 1);
-        Loc[0].CountersLast = getMaxAddr(
-            Loc[0].CountersLast,
+        Loc.DataLast = getMaxAddr(Loc.DataLast, Data + 1);
+        Loc.CountersLast = getMaxAddr(
+            Loc.CountersLast,
             static_cast<char *>(Data_) + Data->CounterPtr + Data->NumCounters * sizeof(uint64_t));
     }
 }
@@ -52,12 +52,12 @@ __device__ void __llvm_profile_register_function(void *Data_) {
 extern "C"
 __device__ void __llvm_profile_register_names_function(void *NamesStart_, uint64_t NamesSize) {
     char *NamesStart = static_cast<char *>(NamesStart_);
-    if (!Loc[0].NamesFirst) {
-        Loc[0].NamesFirst = NamesStart;
-        Loc[0].NamesLast = NamesStart + NamesSize;
+    if (!Loc.NamesFirst) {
+        Loc.NamesFirst = NamesStart;
+        Loc.NamesLast = NamesStart + NamesSize;
         return;
     }
-    Loc[0].NamesFirst = getMinAddr(Loc[0].NamesFirst, NamesStart);
-    Loc[0].NamesLast =
-        getMaxAddr(Loc[0].NamesLast, NamesStart + NamesSize);
+    Loc.NamesFirst = getMinAddr(Loc.NamesFirst, NamesStart);
+    Loc.NamesLast =
+        getMaxAddr(Loc.NamesLast, NamesStart + NamesSize);
 }
