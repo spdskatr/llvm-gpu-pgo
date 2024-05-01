@@ -27,7 +27,6 @@ static void insertRegisterVar(Module &M) {
     if (!RegisterGlobalsF) {
         errs() << "Module " << M.getName() << " is probably not a HIP host module, skipping.\n";
     } else {
-        RegisterGlobalsF->dump();
         auto *RegisterVarF = M.getFunction(HIP_REGISTER_VAR_NAME);
 
         // (&*p): Dereference the iterator and then reference the result to get the pointer.
