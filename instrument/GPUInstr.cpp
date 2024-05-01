@@ -67,6 +67,8 @@ PreservedAnalyses GPUInstrPass::run(Module &M, ModuleAnalysisManager &AM) {
             MPM.addPass(PGOInstrumentationGen{});
             // Make increments more efficient
             MPM.addPass(createModuleToFunctionPassAdaptor(IncrementToWarpBallotPass{}));
+            // Simplify CFG from generated unconditional branches
+            MPM.addPass(createModuleToFunctionPassAdaptor(SimplifyCFGPass{}));
             // Deactivate the LLVM 17 bug
             MPM.addPass(CreateInstrProfRuntimeHookPass{});
             // Lower intrinsics
