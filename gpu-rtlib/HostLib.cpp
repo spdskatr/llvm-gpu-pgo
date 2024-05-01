@@ -82,14 +82,15 @@ static size_t distanceInBytes(T* start, T* end) {
 static void fixRelativePositions() {
     // We have to change the relative pointers for the profdata since all the
     // memory locations have changed
-    size_t HostCounterRel = HostLoc.CountersFirst - reinterpret_cast<char *>(HostLoc.DataFirst);
-    size_t DeviceCounterRel = DeviceLoc.CountersFirst - reinterpret_cast<char *>(DeviceLoc.DataFirst);
-    size_t RelativePtrChange = HostCounterRel - DeviceCounterRel;
+    uintptr_t HostCounterRel = reinterpret_cast<uintptr_t>(HostLoc.CountersFirst) 
+                                - reinterpret_cast<uintptr_t>(HostLoc.DataFirst);
+    uintptr_t DeviceCounterRel = reinterpret_cast<uintptr_t>(DeviceLoc.CountersFirst) 
+                                - reinterpret_cast<uintptr_t>(DeviceLoc.DataFirst);
     for (auto *Data = HostLoc.DataFirst; Data < HostLoc.DataLast; Data++) {
         // Unfortunately .CounterPtr has type const uintptr_t, but luckily we
         // can cast and it works fine because the memory is on the heap
         uintptr_t *Rel = const_cast<uintptr_t *>(&Data->CounterPtr);
-        *Rel = Data->CounterPtr + RelativePtrChange;
+        *Rel = Data->CounterPtr - DeviceCounterRel + HostCounterRel;
     }
 }
 

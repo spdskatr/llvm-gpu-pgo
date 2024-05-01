@@ -1,14 +1,38 @@
 --- PGOInstrumentation.cpp.original	2024-01-31 22:19:09.251076300 +0000
-+++ llvm17/llvm-project-llvmorg-17.0.0/llvm/lib/Transforms/Instrumentation/PGOInstrumentation.cpp	2024-01-31 22:20:55.851784673 +0000
-@@ -875,7 +875,7 @@
++++ llvm17/llvm-project-llvmorg-17.0.0/llvm/lib/Transforms/Instrumentation/PGOInstrumentation.cpp	2024-05-01 12:08:29.403308725 +0100
+@@ -875,12 +875,12 @@
        PGOBlockCoverage);
- 
+
    Type *I8PtrTy = Type::getInt8PtrTy(M->getContext());
 -  auto Name = ConstantExpr::getBitCast(FuncInfo.FuncNameVar, I8PtrTy);
 +  auto Name = ConstantExpr::getAddrSpaceCast(FuncInfo.FuncNameVar, I8PtrTy);
    auto CFGHash = ConstantInt::get(Type::getInt64Ty(M->getContext()),
                                    FuncInfo.FunctionHash);
    if (PGOFunctionEntryCoverage) {
+     auto &EntryBB = F.getEntryBlock();
+-    IRBuilder<> Builder(&EntryBB, EntryBB.getFirstInsertionPt());
++    IRBuilder<> Builder(&EntryBB, EntryBB.getFirstNonPHIOrDbgOrAlloca()->getIterator());
+     // llvm.instrprof.cover(i8* <name>, i64 <hash>, i32 <num-counters>,
+     //                      i32 <index>)
+     Builder.CreateCall(
+@@ -898,7 +898,7 @@
+   if (PGOTemporalInstrumentation) {
+     NumCounters += PGOBlockCoverage ? 8 : 1;
+     auto &EntryBB = F.getEntryBlock();
+-    IRBuilder<> Builder(&EntryBB, EntryBB.getFirstInsertionPt());
++    IRBuilder<> Builder(&EntryBB, EntryBB.getFirstNonPHIOrDbgOrAlloca()->getIterator());
+     // llvm.instrprof.timestamp(i8* <name>, i64 <hash>, i32 <num-counters>,
+     //                          i32 <index>)
+     Builder.CreateCall(
+@@ -908,7 +908,7 @@
+   }
+
+   for (auto *InstrBB : InstrumentBBs) {
+-    IRBuilder<> Builder(InstrBB, InstrBB->getFirstInsertionPt());
++    IRBuilder<> Builder(InstrBB, InstrBB->getFirstNonPHIOrDbgOrAlloca()->getIterator());
+     assert(Builder.GetInsertPoint() != InstrBB->end() &&
+            "Cannot get the Instrumentation point");
+     // llvm.instrprof.increment(i8* <name>, i64 <hash>, i32 <num-counters>,
 @@ -964,7 +964,7 @@
        populateEHOperandBundle(Cand, BlockColors, OpBundles);
        Builder.CreateCall(
@@ -27,3 +51,4 @@
         Builder.getInt64(FuncHash), Builder.getInt32(TotalNumCtrs),
         Builder.getInt32(*CurCtrIdx), Step});
    ++(*CurCtrIdx);
+   
