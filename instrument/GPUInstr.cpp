@@ -27,6 +27,8 @@
 
 using namespace llvm;
 
+static cl::opt<std::string> UseProfilePath{"gpuinstr-use", cl::init(""), cl::desc("Path to profile for GPU profile-guided optimization")};
+
 PreservedAnalyses GPUInstrPass::run(Module &M, ModuleAnalysisManager &AM) {
     // Only run PGO instrumentation if the target is GPU
     if (M.getTargetTriple() == "amdgcn-amd-amdhsa") {
@@ -53,9 +55,9 @@ PreservedAnalyses GPUInstrPass::run(Module &M, ModuleAnalysisManager &AM) {
         MPM.addPass(std::move(MIWP));
         MPM.addPass(GlobalDCEPass{});
 
-        if (char *Filename = getenv("LLVM_GPUPGO_USE")) {
-            errs() << "Using " << Filename << " as profile file for PGOInstrumentationUse\n";
-            MPM.addPass(PGOInstrumentationUse{Filename});
+        if (!UseProfilePath.empty()) {
+            errs() << "Using " << UseProfilePath << " as profile file for PGOInstrumentationUse\n";
+            MPM.addPass(PGOInstrumentationUse{UseProfilePath});
             MPM.addPass(RequireAnalysisPass<ProfileSummaryAnalysis, Module>{});
         } else {
             errs() << "Running PGO instrumentation on module " << M.getModuleIdentifier() 
@@ -64,7 +66,7 @@ PreservedAnalyses GPUInstrPass::run(Module &M, ModuleAnalysisManager &AM) {
             // NOTE: LLVM was modified to change bitcasts to addrspace casts
             MPM.addPass(PGOInstrumentationGen{});
             // Make increments more efficient
-            MPM.addPass(IncrementToWarpBallotPass{});
+            MPM.addPass(createModuleToFunctionPassAdaptor(IncrementToWarpBallotPass{}));
             // Deactivate the LLVM 17 bug
             MPM.addPass(CreateInstrProfRuntimeHookPass{});
             // Lower intrinsics

@@ -1,9 +1,10 @@
+#pragma once
 #include <llvm/IR/BasicBlock.h>
 #include <llvm/IR/Module.h>
 #include <llvm/IR/PassManager.h>
 
 struct IncrementToWarpBallotPass : public llvm::PassInfoMixin<IncrementToWarpBallotPass> {
-    llvm::PreservedAnalyses run(llvm::Module &M, llvm::ModuleAnalysisManager &AM);
+    llvm::PreservedAnalyses run(llvm::Function &F, llvm::FunctionAnalysisManager &AM);
 };
 
 struct CreateInstrProfRuntimeHookPass : public llvm::PassInfoMixin<CreateInstrProfRuntimeHookPass> {

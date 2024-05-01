@@ -1,3 +1,4 @@
+#pragma once
 #include <cstdint>
 typedef unsigned long uint64_t;
 typedef unsigned uint32_t;

@@ -31,20 +31,20 @@ if (Val) {
 }
 NOTE: We assume that Val is either zero or one
 */
-static void modifyIncrement(Module &M, CallInst *Call, Value *Val) {
-    Type *Int64Ty = Type::getInt64Ty(M.getContext());
-    Type *Int32Ty = Type::getInt32Ty(M.getContext());
-    Type *MetadataTy = Type::getMetadataTy(M.getContext());
+static void modifyIncrement(Module *M, CallInst *Call, Value *Val) {
+    Type *Int64Ty = Type::getInt64Ty(M->getContext());
+    Type *Int32Ty = Type::getInt32Ty(M->getContext());
+    Type *MetadataTy = Type::getMetadataTy(M->getContext());
     // Get intrinsics
-    Function *CTTZ = Intrinsic::getDeclaration(&M, Intrinsic::cttz, Int64Ty);
-    Function *CTPOP = Intrinsic::getDeclaration(&M, Intrinsic::ctpop, Int64Ty);
-    Function *ReadReg = Intrinsic::getDeclaration(&M, Intrinsic::read_register, Int64Ty);
-    Function *MbcntLo = Intrinsic::getDeclaration(&M, Intrinsic::amdgcn_mbcnt_lo);
-    Function *MbcntHi = Intrinsic::getDeclaration(&M, Intrinsic::amdgcn_mbcnt_hi);
+    Function *CTTZ = Intrinsic::getDeclaration(M, Intrinsic::cttz, Int64Ty);
+    Function *CTPOP = Intrinsic::getDeclaration(M, Intrinsic::ctpop, Int64Ty);
+    Function *ReadReg = Intrinsic::getDeclaration(M, Intrinsic::read_register, Int64Ty);
+    Function *MbcntLo = Intrinsic::getDeclaration(M, Intrinsic::amdgcn_mbcnt_lo);
+    Function *MbcntHi = Intrinsic::getDeclaration(M, Intrinsic::amdgcn_mbcnt_hi);
 
     // Get exec register
-    Value *ExecReg = MetadataAsValue::get(M.getContext(), 
-        MDNode::get(M.getContext(), {MDString::get(M.getContext(), "exec")}));
+    Value *ExecReg = MetadataAsValue::get(M->getContext(), 
+        MDNode::get(M->getContext(), {MDString::get(M->getContext(), "exec")}));
     // Get int -1
     Constant *LongZero = ConstantInt::get(Int64Ty, 0);
     Constant *IntZero = ConstantInt::get(Int32Ty, 0);
@@ -72,7 +72,7 @@ static void modifyIncrement(Module &M, CallInst *Call, Value *Val) {
     Value *Mask = IRB.CreateCall(ReadReg, { ExecReg });
     Value *LaneId = IRB.CreateCall(MbcntHi, { IntNeg1, IRB.CreateCall(MbcntLo, { IntNeg1, IntZero }) });
     Value *TZ = IRB.CreateCall(CTTZ, { Mask, 
-        ConstantInt::getBool(M.getContext(), true) });
+        ConstantInt::getBool(M->getContext(), true) });
     Value *IsLeader = IRB.CreateICmpEQ(LaneId, 
         IRB.CreateIntCast(TZ, Int32Ty, false));
     // If leader, branch to profiling block
@@ -82,7 +82,7 @@ static void modifyIncrement(Module &M, CallInst *Call, Value *Val) {
 
     // INSTRPROF block
     // Modify the increment intrinsic call
-    auto IncrStep = Intrinsic::getDeclaration(&M, Intrinsic::instrprof_increment_step);
+    auto IncrStep = Intrinsic::getDeclaration(M, Intrinsic::instrprof_increment_step);
     IRBuilder<> LeaderB{B->getTerminator()};
     CallInst *Count = LeaderB.CreateCall(CTPOP, { Mask });
     LeaderB.CreateCall(IncrStep, {
@@ -94,24 +94,22 @@ static void modifyIncrement(Module &M, CallInst *Call, Value *Val) {
     Call->eraseFromParent();
 }
 
-PreservedAnalyses IncrementToWarpBallotPass::run(Module &M, ModuleAnalysisManager &AM) {
-    if (M.getTargetTriple() == "amdgcn-amd-amdhsa") {
-        Type *Int64Ty = Type::getInt64Ty(M.getContext());
-        for (Function &F : M) {
-            SmallVector<std::pair<CallInst *, Value *>, 0> Targets;
-            for (Instruction &I : instructions(F)) {
-                if (IntrinsicInst *Call = dyn_cast<IntrinsicInst>(&I)) {
-                    auto ID = Call->getIntrinsicID();
-                    if (ID == Intrinsic::instrprof_increment) {
-                        Targets.emplace_back(Call, ConstantInt::get(Int64Ty, 1));
-                    } else if (ID == Intrinsic::instrprof_increment_step) {
-                        Targets.emplace_back(Call, Call->getArgOperand(4));
-                    }
+PreservedAnalyses IncrementToWarpBallotPass::run(Function &F, FunctionAnalysisManager &AM) {
+    if (F.getParent()->getTargetTriple() == "amdgcn-amd-amdhsa") {
+        Type *Int64Ty = Type::getInt64Ty(F.getContext());
+        SmallVector<std::pair<CallInst *, Value *>, 0> Targets;
+        for (Instruction &I : instructions(F)) {
+            if (IntrinsicInst *Call = dyn_cast<IntrinsicInst>(&I)) {
+                auto ID = Call->getIntrinsicID();
+                if (ID == Intrinsic::instrprof_increment) {
+                    Targets.emplace_back(Call, ConstantInt::get(Int64Ty, 1));
+                } else if (ID == Intrinsic::instrprof_increment_step) {
+                    Targets.emplace_back(Call, Call->getArgOperand(4));
                 }
             }
-            for (auto& [Call, Val] : Targets) {
-                modifyIncrement(M, Call, Val);
-            }
+        }
+        for (auto& [Call, Val] : Targets) {
+            modifyIncrement(F.getParent(), Call, Val);
         }
     }
     return PreservedAnalyses::all();
