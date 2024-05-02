@@ -1,3 +1,4 @@
+#include <llvm/ADT/ArrayRef.h>
 #include <llvm/ADT/StringRef.h>
 #include <llvm/IR/PassManager.h>
 #include <llvm/Passes/PassBuilder.h>
@@ -6,8 +7,6 @@
 #include "Passes.h"
 
 using namespace llvm;
-
-static cl::opt<bool> TestFlag{"test-pass-plugin", cl::init(false), cl::Hidden, cl::desc("Hello pass plugin!")};
 
 extern "C" LLVM_ATTRIBUTE_WEAK ::llvm::PassPluginLibraryInfo
 llvmGetPassPluginInfo() { return {
@@ -18,6 +17,17 @@ llvmGetPassPluginInfo() { return {
         PB.registerPipelineParsingCallback([](StringRef Name, FunctionPassManager& FPM, ArrayRef<PassBuilder::PipelineElement>) {
             if (Name == "instr-warp-ballot") {
                 FPM.addPass(IncrementToWarpBallotPass{});
+                return true;
+            }
+            return false;
+        });
+        PB.registerPipelineParsingCallback([](StringRef Name, ModulePassManager &MPM, ArrayRef<PassBuilder::PipelineElement>) {
+            if (Name == "instr-create-hook") {
+                MPM.addPass(CreateInstrProfRuntimeHookPass{});
+                return true;
+            }
+            if (Name == "instr-gen-gpu") {
+                MPM.addPass(GPUInstrPass{});
                 return true;
             }
             return false;
