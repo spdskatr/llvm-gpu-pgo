@@ -11,13 +11,16 @@ using namespace llvm;
 // work around the above mentioned bug in LLVM 17 instrprof lowering.
 // See: InstrProfiling::emitRegistration()
 PreservedAnalyses CreateInstrProfRuntimeHookPass::run(Module &M, ModuleAnalysisManager &AM) {
-    auto *Int32Ty = Type::getInt32Ty(M.getContext());
-    auto *Var = new GlobalVariable(M, Int32Ty, false,
-            GlobalValue::ExternalLinkage, nullptr, getInstrProfRuntimeHookVarName());
-    Var->setVisibility(GlobalValue::HiddenVisibility);
-    errs() << "Added GPU runtime hook\n";
-    PreservedAnalyses PA;
-    PA.preserveSet(AllAnalysesOn<Function>::ID());
-    return PA;
+    if (M.getTargetTriple() == "amdgcn-amd-amdhsa") {
+        auto *Int32Ty = Type::getInt32Ty(M.getContext());
+        auto *Var = new GlobalVariable(M, Int32Ty, false,
+                GlobalValue::ExternalLinkage, nullptr, getInstrProfRuntimeHookVarName());
+        Var->setVisibility(GlobalValue::HiddenVisibility);
+        errs() << "Added GPU runtime hook\n";
+        PreservedAnalyses PA;
+        PA.preserveSet(AllAnalysesOn<Function>::ID());
+        return PA;
+    }
+    return PreservedAnalyses::all();
 }
 
