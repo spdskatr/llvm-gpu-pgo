@@ -112,5 +112,5 @@ PreservedAnalyses IncrementToWarpBallotPass::run(Function &F, FunctionAnalysisMa
             modifyIncrement(F.getParent(), Call, Val);
         }
     }
-    return PreservedAnalyses::all();
+    return PreservedAnalyses::none();
 }

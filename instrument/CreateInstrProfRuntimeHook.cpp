@@ -1,3 +1,4 @@
+#include <llvm/IR/Function.h>
 #include <llvm/IR/PassManager.h>
 #include <llvm/ProfileData/InstrProf.h>
 #include "Passes.h"
@@ -15,6 +16,8 @@ PreservedAnalyses CreateInstrProfRuntimeHookPass::run(Module &M, ModuleAnalysisM
             GlobalValue::ExternalLinkage, nullptr, getInstrProfRuntimeHookVarName());
     Var->setVisibility(GlobalValue::HiddenVisibility);
     errs() << "Added GPU runtime hook\n";
-    return PreservedAnalyses::all();
+    PreservedAnalyses PA;
+    PA.preserveSet(AllAnalysesOn<Function>::ID());
+    return PA;
 }
 

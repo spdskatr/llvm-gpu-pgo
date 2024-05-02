@@ -90,6 +90,7 @@ PreservedAnalyses GPURTLibInteropPass::run(Module &M, ModuleAnalysisManager &AM)
         } else {
             // Not the device target, so probably the host target. Apply host-side instrumentation
             instrumentHostCode(M);
+            return PreservedAnalyses::none();
         }
     }
     return PreservedAnalyses::all();
