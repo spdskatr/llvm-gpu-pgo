@@ -27,8 +27,6 @@
 
 using namespace llvm;
 
-static cl::opt<std::string> UseProfilePath{"gpuinstr-use", cl::init(""), cl::desc("Path to profile for GPU profile-guided optimization")};
-
 PreservedAnalyses GPUInstrPass::run(Module &M, ModuleAnalysisManager &AM) {
     // Only run PGO instrumentation if the target is GPU
     if (M.getTargetTriple() == "amdgcn-amd-amdhsa") {

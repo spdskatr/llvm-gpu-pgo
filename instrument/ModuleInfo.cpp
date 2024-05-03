@@ -8,6 +8,8 @@
 
 using namespace llvm;
 
+static cl::opt<std::string> UseProfilePath{"gpuinstr-use", cl::init(""), cl::desc("Path to profile for GPU profile-guided optimization")};
+
 extern "C" LLVM_ATTRIBUTE_WEAK ::llvm::PassPluginLibraryInfo
 llvmGetPassPluginInfo() { return {
     .APIVersion = LLVM_PLUGIN_API_VERSION,
@@ -27,19 +29,21 @@ llvmGetPassPluginInfo() { return {
                 return true;
             }
             if (Name == "instr-gen-gpu") {
-                MPM.addPass(GPUInstrPass{});
+                MPM.addPass(GPUInstrPass{UseProfilePath});
                 return true;
             }
             return false;
         });
 
-        PB.registerPipelineStartEPCallback([](ModulePassManager &MPM, OptimizationLevel OL) {
-            MPM.addPass(GPURTLibInteropPass{});
-        });
+        if (UseProfilePath.empty()) {
+            PB.registerPipelineStartEPCallback([](ModulePassManager &MPM, OptimizationLevel OL) {
+                MPM.addPass(GPURTLibInteropPass{});
+            });
+        }
         // Insert PGO instrumentation as close to the original place as
         // possible, which is during the module simplification pipeline.
         PB.registerPipelineEarlySimplificationEPCallback([](ModulePassManager &MPM, OptimizationLevel OL) {
-            MPM.addPass(GPUInstrPass{});
+            MPM.addPass(GPUInstrPass{UseProfilePath});
         });
     }
 };}

@@ -16,5 +16,9 @@ struct GPURTLibInteropPass : public llvm::PassInfoMixin<GPURTLibInteropPass> {
 };
 
 struct GPUInstrPass : public llvm::PassInfoMixin<GPUInstrPass> {
+    GPUInstrPass(std::string UseProfilePath) : UseProfilePath(UseProfilePath) {
+    }
     llvm::PreservedAnalyses run(llvm::Module &M, llvm::ModuleAnalysisManager &AM);
+private:
+    std::string UseProfilePath;
 };

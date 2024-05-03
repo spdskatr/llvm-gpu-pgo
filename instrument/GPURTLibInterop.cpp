@@ -85,13 +85,9 @@ static void instrumentHostCode(Module &M) {
 
 PreservedAnalyses GPURTLibInteropPass::run(Module &M, ModuleAnalysisManager &AM) {
     if (M.getTargetTriple() != "amdgcn-amd-amdhsa") {
-        if (getenv("LLVM_GPUPGO_USE")) {
-            errs() << "Host-side instrumentation skipped; profile detected.\n";
-        } else {
-            // Not the device target, so probably the host target. Apply host-side instrumentation
-            instrumentHostCode(M);
-            return PreservedAnalyses::none();
-        }
+        // Not the device target, so probably the host target. Apply host-side instrumentation
+        instrumentHostCode(M);
+        return PreservedAnalyses::none();
     }
     return PreservedAnalyses::all();
 }
