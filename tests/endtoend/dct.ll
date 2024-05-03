@@ -1,0 +1,4 @@
+; RUN: export FILE="HIP-Examples-Applications/dct/dct.cpp"
+; RUN: %{SETUP} && %{GET} && %{RUN_INSTR} && %{RUN_PROFILE} && %{RUN_MERGE} && %{RUN_OPT} && %{RUN_FINAL}
+; CHECK: Output
+; CHECK: 805.926 -28.8861 -28.2981 86.9603 -15.4413 -88.0154 -75.8528 -53.792 1090.45 64.68 -55.97 -59.873 -101.691 14.5389 63.3912
