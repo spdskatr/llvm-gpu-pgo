@@ -14,10 +14,18 @@ add_custom_command(OUTPUT ${BITCODE_NAME}.bc
     DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/DeviceLib.cpp"
     COMMENT "Generating LLVM bitcode ${BITCODE_NAME}.bc"
     VERBATIM)
+add_custom_command(OUTPUT ${BITCODE_NAME}_legacy.bc
+    COMMAND "/opt/rocm/bin/hipcc"
+    ARGS "${CMAKE_CURRENT_SOURCE_DIR}/DeviceLibLegacy.cpp" -emit-llvm --cuda-device-only --offload-arch=gfx1100 -fgpu-rdc -o ${BITCODE_NAME}_legacy.bc
+    DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/DeviceLibLegacy.cpp"
+    COMMENT "Generating LLVM bitcode ${BITCODE_NAME}_legacy.bc"
+    VERBATIM)
+
 add_custom_target(RTBitCode DEPENDS ${BITCODE_NAME}.bc)
+add_custom_target(RTBitCodeLegacy DEPENDS ${BITCODE_NAME}_legacy.bc)
 
 add_library(GPURTLib STATIC
     HostLib.cpp
 )
 
-add_dependencies(GPURTLib RTBitCode)
+add_dependencies(GPURTLib RTBitCode RTBitCodeLegacy)

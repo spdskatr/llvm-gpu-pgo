@@ -12,7 +12,6 @@
 
 #define __HIP_PLATFORM_AMD__
 #include <assert.h>
-#include <iostream>
 #include "hip/hip_runtime.h"
 
 

@@ -67,9 +67,19 @@ static void debugLog() {
     debugRes(HostLoc);
 
     // Show some data
-    DEBUG_PRINTF("counters:");
+    DEBUG_PRINTF("data:\n");
+    for (char *c = reinterpret_cast<char *>(HostLoc.DataFirst); c < reinterpret_cast<char *>(HostLoc.DataLast); c++) {
+        DEBUG_PRINTF("\\x%02x", (unsigned char)*c);
+    }
+    DEBUG_PRINTF("\n");
+    DEBUG_PRINTF("names:\n");
+    for (char *c = HostLoc.NamesFirst; c < HostLoc.NamesLast; c++) {
+        DEBUG_PRINTF("\\x%02x", (unsigned char)*c);
+    }
+    DEBUG_PRINTF("\n");
+    DEBUG_PRINTF("counters:\n");
     for (char *c = HostLoc.CountersFirst; c < HostLoc.CountersLast; c++) {
-        DEBUG_PRINTF(" %02x", (unsigned char)*c);
+        DEBUG_PRINTF("\\x%02x", (unsigned char)*c);
     }
     DEBUG_PRINTF("\n");
 }
@@ -126,6 +136,7 @@ static void fetchData() {
         HostLoc.CountersFirst, ProxyLoc.CountersFirst, DeviceLoc.CountersFirst,
         distanceInBytes(HostLoc.CountersFirst, HostLoc.CountersLast));
 
+    debugLog();
     fixRelativePositions();
 }
 
@@ -142,6 +153,5 @@ void __llvm_gpuprof_sync(void) {
         __llvm_profile_initialize_file();
     }
     fetchData();
-    debugLog();
     assert(!__llvm_profile_write_file());
 }
