@@ -4,21 +4,24 @@
 #include <llvm/IR/PassManager.h>
 
 struct IncrementToWarpBallotPass : public llvm::PassInfoMixin<IncrementToWarpBallotPass> {
+public:
     llvm::PreservedAnalyses run(llvm::Function &F, llvm::FunctionAnalysisManager &AM);
 };
 
 struct CreateInstrProfRuntimeHookPass : public llvm::PassInfoMixin<CreateInstrProfRuntimeHookPass> {
+public:
     llvm::PreservedAnalyses run(llvm::Module &M, llvm::ModuleAnalysisManager &AM);
 };
 
-struct GPURTLibInteropPass : public llvm::PassInfoMixin<GPURTLibInteropPass> {
+class GPURTLibInteropPass : public llvm::PassInfoMixin<GPURTLibInteropPass> {
+public:
     llvm::PreservedAnalyses run(llvm::Module &M, llvm::ModuleAnalysisManager &AM);
 };
 
-struct GPUInstrPass : public llvm::PassInfoMixin<GPUInstrPass> {
+class GPUInstrPass : public llvm::PassInfoMixin<GPUInstrPass> {
+    std::string UseProfilePath;
+public:
     GPUInstrPass(std::string UseProfilePath) : UseProfilePath(UseProfilePath) {
     }
     llvm::PreservedAnalyses run(llvm::Module &M, llvm::ModuleAnalysisManager &AM);
-private:
-    std::string UseProfilePath;
 };

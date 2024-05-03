@@ -1,4 +1,4 @@
-// RUN: hipcc %s \
+// RUN: $HIP_PATH/bin/hipcc %s \
 // RUN:   -Xoffload-linkeramdgcn-amd-amdhsa $GPUPGO_ROOT/build/gpu-rtlib/rtlib.bc \
 // RUN:   -Xoffload-linkeramdgcn-amd-amdhsa -plugin-opt=-amdgpu-early-inline-all=true \
 // RUN:   -Xoffload-linkeramdgcn-amd-amdhsa -plugin-opt=-amdgpu-function-calls=false \

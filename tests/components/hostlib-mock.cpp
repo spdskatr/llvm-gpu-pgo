@@ -1,4 +1,4 @@
-// RUN: hipcc %s \
+// RUN: $HIP_PATH/bin/hipcc %s \
 // RUN:   -L$GPUPGO_ROOT/build/gpu-rtlib -lGPURTLib -lclang_rt.profile \
 // RUN:   -fgpu-rdc -o %t
 //

@@ -1,4 +1,4 @@
-// RUN: hipcc %s -fpass-plugin=$GPUPGO_ROOT/build/instrument/GPUInstrPass.so \
+// RUN: $HIP_PATH/bin/hipcc %s -fpass-plugin=$GPUPGO_ROOT/build/instrument/GPUInstrPass.so \
 // RUN:   -L$GPUPGO_ROOT/build/gpu-rtlib -lGPURTLib -lclang_rt.profile \
 // RUN:   -Xoffload-linkeramdgcn-amd-amdhsa $GPUPGO_ROOT/build/gpu-rtlib/rtlib.bc \
 // RUN:   -Xoffload-linkeramdgcn-amd-amdhsa -plugin-opt=-amdgpu-early-inline-all=true \
