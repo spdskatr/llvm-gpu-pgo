@@ -25,3 +25,8 @@ public:
     }
     llvm::PreservedAnalyses run(llvm::Module &M, llvm::ModuleAnalysisManager &AM);
 };
+
+class RemoveProfileMetadataPass : public llvm::PassInfoMixin<GPUInstrPass> {
+public:
+    llvm::PreservedAnalyses run(llvm::Function &F, llvm::FunctionAnalysisManager &AM);
+};

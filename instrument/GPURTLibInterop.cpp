@@ -6,7 +6,6 @@
 #include <llvm/IR/InstIterator.h>
 #include <llvm/IR/PassManager.h>
 #include <llvm/ProfileData/InstrProf.h>
-#include <stdatomic.h>
 #include "Passes.h"
 using namespace llvm;
 

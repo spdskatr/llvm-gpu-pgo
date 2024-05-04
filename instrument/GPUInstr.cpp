@@ -1,4 +1,6 @@
+#include <llvm/Analysis/TargetLibraryInfo.h>
 #include <llvm/IR/BasicBlock.h>
+#include <llvm/IR/DerivedTypes.h>
 #include <llvm/IR/GlobalValue.h>
 #include <llvm/IR/GlobalVariable.h>
 #include <llvm/IR/IntrinsicInst.h>

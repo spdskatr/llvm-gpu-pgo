@@ -1,6 +1,7 @@
 #include <llvm/ADT/ArrayRef.h>
 #include <llvm/ADT/StringRef.h>
 #include <llvm/IR/PassManager.h>
+#include <llvm/Passes/OptimizationLevel.h>
 #include <llvm/Passes/PassBuilder.h>
 #include <llvm/Passes/PassPlugin.h>
 #include <llvm/Support/CommandLine.h>
@@ -36,9 +37,14 @@ llvmGetPassPluginInfo() { return {
         });
 
         if (UseProfilePath.empty()) {
-            PB.registerPipelineStartEPCallback([](ModulePassManager &MPM, OptimizationLevel OL) {
+            PB.registerPipelineStartEPCallback([](ModulePassManager &MPM, OptimizationLevel) {
                 MPM.addPass(GPURTLibInteropPass{});
             });
+        } else {
+            // Disable PGO at the backend.
+            //PB.registerVectorizerStartEPCallback([](FunctionPassManager &FPM, OptimizationLevel) {
+            //    FPM.addPass(RemoveProfileMetadataPass{});
+            //});
         }
         // Insert PGO instrumentation as close to the original place as
         // possible, which is during the module simplification pipeline.

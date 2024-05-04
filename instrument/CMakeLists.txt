@@ -5,5 +5,6 @@ add_llvm_pass_plugin(GPUInstrPass
     CreateInstrProfRuntimeHook.cpp
     GPUInstr.cpp
     GPURTLibInterop.cpp
+    RemoveProfileMetadata.cpp
     ModuleInfo.cpp
 )
