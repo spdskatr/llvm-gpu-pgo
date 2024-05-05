@@ -34,7 +34,6 @@ NOTE: We assume that Val is either zero or one
 static void modifyIncrement(Module *M, CallInst *Call, Value *Val) {
     Type *Int64Ty = Type::getInt64Ty(M->getContext());
     Type *Int32Ty = Type::getInt32Ty(M->getContext());
-    Type *MetadataTy = Type::getMetadataTy(M->getContext());
     // Get intrinsics
     Function *CTTZ = Intrinsic::getDeclaration(M, Intrinsic::cttz, Int64Ty);
     Function *CTPOP = Intrinsic::getDeclaration(M, Intrinsic::ctpop, Int64Ty);
