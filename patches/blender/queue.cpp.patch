@@ -105,18 +105,20 @@
 +void __llvm_gpuprof_sync(hipModule_t hipModule) {
 +    HIP_ASSERT(hipDeviceSynchronize());
 +    if (!DeviceLoc.DataFirst) {
-+        hipDeviceptr_t locs_loc;
-+        size_t locs_size;
++        hipDeviceptr_t locs_loc = NULL;
++        size_t locs_size = 0;
 +        HIP_ASSERT(hipModuleGetGlobal(&locs_loc, &locs_size, hipModule, "__llvm_gpuprof_loc"));
-+        // Symbol was found and copied!
-+        HIP_ASSERT(hipMemcpyDtoH(&DeviceLoc, locs_loc, locs_size));
-+
-+        if (DeviceLoc.DataFirst) {
-+            allocateLocs();
-+            // Now that we have profdata, we should initialise compiler-rt now
-+            __llvm_profile_initialize_file();
-+            atexit(dump_data_to_file);
-+            fprintf(stderr, "LLVM GPU InstrProf Activated\n\n");
++        if (locs_size) {
++            // Symbol was found and copied!
++            HIP_ASSERT(hipMemcpyDtoH(&DeviceLoc, locs_loc, locs_size));
++    
++            if (DeviceLoc.DataFirst) {
++                allocateLocs();
++                // Now that we have profdata, we should initialise compiler-rt now
++                __llvm_profile_initialize_file();
++                atexit(dump_data_to_file);
++                fprintf(stderr, "LLVM GPU InstrProf Activated\n\n");
++            }
 +        }
 +    }
 +    if (DeviceLoc.DataFirst) {
