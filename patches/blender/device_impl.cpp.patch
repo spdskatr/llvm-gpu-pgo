@@ -1,6 +1,6 @@
 --- a/intern/cycles/device/hip/device_impl.cpp
 +++ b/intern/cycles/device/hip/device_impl.cpp
-@@ -261,6 +261,15 @@ string HIPDevice::compile_kernel(const uint kernel_features, const char *name, c
+@@ -261,6 +261,18 @@ string HIPDevice::compile_kernel(const uint kernel_features, const char *name, c
  #  endif
    options.append(" --amdgpu-target=").append(arch.c_str());
 
@@ -10,7 +10,10 @@
 +  }
 +
 +  if (getenv("LLVM_GPUPGO_USE")) {
-+      options.append(" -fpass-plugin=/home/ts862/llvm-gpu-pgo/build/instrument/GPUInstrPass.so");
++      options.append(" -Xclang -load -Xclang /home/ts862/llvm-gpu-pgo/build/instrument/GPUInstrPass.so");
++      options.append(" -fpass-plugin=/home/ts862/llvm-gpu-pgo/build/instrument/GPUInstrPass.so -fgpu-rdc");
++      options.append(" -mllvm -hot-cold-split -mllvm -enable-chr=false -mllvm -gpuinstr-use=");
++      options.append(getenv("LLVM_GPUPGO_USE"));
 +  }
 +
    const string include_path = source_path;

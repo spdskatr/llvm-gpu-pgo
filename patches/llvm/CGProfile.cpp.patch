@@ -1,0 +1,12 @@
+--- CGProfile.cpp.original	2024-05-05 11:39:44.718449560 +0100
++++ llvm17/llvm-project-llvmorg-17.0.0/llvm/lib/Transforms/Instrumentation/CGProfile.cpp	2024-04-07 18:32:57.598357970 +0100
+@@ -99,6 +99,9 @@
+ }
+
+ PreservedAnalyses CGProfilePass::run(Module &M, ModuleAnalysisManager &MAM) {
++  if (M.getModuleFlag("CG Profile")) {
++    return PreservedAnalyses::all();
++  }
+   FunctionAnalysisManager &FAM =
+       MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+   runCGProfilePass(M, FAM);

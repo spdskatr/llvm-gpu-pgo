@@ -1,0 +1,140 @@
+--- a/intern/cycles/device/hip/queue.cpp
++++ b/intern/cycles/device/hip/queue.cpp
+@@ -10,6 +10,128 @@
+ #  include "device/hip/graphics_interop.h"
+ #  include "device/hip/kernel.h"
+
++// BEGIN CUSTOM PATCHED CODE
++#include "/opt/rocm/llvm/include/llvm/ProfileData/InstrProfData.inc"
++enum ValueKind {
++#define VALUE_PROF_KIND(Enumerator, Value, Descr) Enumerator = Value,
++#include "/opt/rocm/llvm/include/llvm/ProfileData/InstrProfData.inc"
++};
++
++typedef uintptr_t IntPtrT;
++typedef struct __llvm_profile_data {
++#define INSTR_PROF_DATA(Type, LLVMType, Name, Initializer) Type Name;
++#include "/opt/rocm/llvm/include/llvm/ProfileData/InstrProfData.inc"
++} __llvm_profile_data;
++
++
++typedef struct {
++    __llvm_profile_data *DataFirst;
++    __llvm_profile_data *DataLast;
++    char *NamesFirst;
++    char *NamesLast;
++    char *CountersFirst;
++    char *CountersLast;
++} ProfDataLocs;
++
++#define HIP_ASSERT(x) (x)
++#define HostLoc __llvm_prf_override_locs
++
++ProfDataLocs *init_loc(void);
++
++int __llvm_profile_runtime;
++extern "C" void __llvm_profile_initialize_file(void);
++extern "C" int __llvm_profile_write_file(void);
++
++__attribute__ ((visibility("hidden"))) __attribute__((weak))
++uint64_t INSTR_PROF_RAW_VERSION_VAR = INSTR_PROF_RAW_VERSION | VARIANT_MASK_IR_PROF;
++
++ProfDataLocs DeviceLoc;
++ProfDataLocs ProxyLoc;
++ProfDataLocs HostLoc;
++
++static void memcpyArbitraryDeviceToHost(void *hostPtr, void *proxyPtr, const void *devPtr, size_t size) {
++    HIP_ASSERT(hipMemcpy(proxyPtr, devPtr, size, hipMemcpyDeviceToDevice));
++    HIP_ASSERT(hipMemcpy(hostPtr, proxyPtr, size, hipMemcpyDeviceToHost));
++}
++
++template <typename T>
++static size_t distanceInBytes(T* start, T* end) {
++    return (end - start) * sizeof(T);
++}
++
++static void fixRelativePositions() {
++    size_t HostCounterRel = HostLoc.CountersFirst - reinterpret_cast<char *>(HostLoc.DataFirst);
++    size_t DeviceCounterRel = DeviceLoc.CountersFirst - reinterpret_cast<char *>(DeviceLoc.DataFirst);
++    size_t RelativePtrChange = HostCounterRel - DeviceCounterRel;
++    for (auto *Data = HostLoc.DataFirst; Data < HostLoc.DataLast; Data++) {
++        uintptr_t *Rel = const_cast<uintptr_t *>(&Data->CounterPtr);
++        *Rel = Data->CounterPtr + RelativePtrChange;
++    }
++}
++
++static void allocateLocs() {
++    size_t DataSize = DeviceLoc.DataLast - DeviceLoc.DataFirst;
++    size_t NamesSize = DeviceLoc.NamesLast - DeviceLoc.NamesFirst;
++    size_t CountersSize = DeviceLoc.CountersLast - DeviceLoc.CountersFirst;
++
++    HostLoc.DataFirst = static_cast<__llvm_profile_data *>(malloc(DataSize * sizeof(__llvm_profile_data)));
++    HostLoc.DataLast = HostLoc.DataFirst + DataSize;
++    HostLoc.NamesFirst = static_cast<char *>(malloc(NamesSize * sizeof(char)));
++    HostLoc.NamesLast = HostLoc.NamesFirst + NamesSize;
++    HostLoc.CountersFirst = static_cast<char *>(malloc(CountersSize * sizeof(char)));
++    HostLoc.CountersLast = HostLoc.CountersFirst + CountersSize;
++
++    HIP_ASSERT(hipMalloc((hipDeviceptr_t *)&ProxyLoc.DataFirst, DataSize * sizeof(__llvm_profile_data)));
++    ProxyLoc.DataLast = ProxyLoc.DataFirst + DataSize;
++    HIP_ASSERT(hipMalloc((hipDeviceptr_t *)&ProxyLoc.NamesFirst, NamesSize * sizeof(char)));
++    ProxyLoc.NamesLast = ProxyLoc.NamesFirst + NamesSize;
++    HIP_ASSERT(hipMalloc((hipDeviceptr_t *)&ProxyLoc.CountersFirst, CountersSize * sizeof(char)));
++    ProxyLoc.CountersLast = ProxyLoc.CountersFirst + CountersSize;
++}
++
++static void fetchData() {
++    memcpyArbitraryDeviceToHost(
++        HostLoc.DataFirst, ProxyLoc.DataFirst, DeviceLoc.DataFirst,
++        distanceInBytes(HostLoc.DataFirst, HostLoc.DataLast));
++    memcpyArbitraryDeviceToHost(
++        HostLoc.NamesFirst, ProxyLoc.NamesFirst, DeviceLoc.NamesFirst,
++        distanceInBytes(HostLoc.NamesFirst, HostLoc.NamesLast));
++    memcpyArbitraryDeviceToHost(
++        HostLoc.CountersFirst, ProxyLoc.CountersFirst, DeviceLoc.CountersFirst,
++        distanceInBytes(HostLoc.CountersFirst, HostLoc.CountersLast));
++
++    fixRelativePositions();
++}
++
++void dump_data_to_file() {
++    __llvm_profile_write_file();
++}
++
++// Sync hook run after each kernel call
++void __llvm_gpuprof_sync(hipModule_t hipModule) {
++    HIP_ASSERT(hipDeviceSynchronize());
++    if (!DeviceLoc.DataFirst) {
++        hipDeviceptr_t locs_loc;
++        size_t locs_size;
++        HIP_ASSERT(hipModuleGetGlobal(&locs_loc, &locs_size, hipModule, "__llvm_gpuprof_loc"));
++        // Symbol was found and copied!
++        HIP_ASSERT(hipMemcpyDtoH(&DeviceLoc, locs_loc, locs_size));
++
++        if (DeviceLoc.DataFirst) {
++            allocateLocs();
++            // Now that we have profdata, we should initialise compiler-rt now
++            __llvm_profile_initialize_file();
++            atexit(dump_data_to_file);
++            fprintf(stderr, "LLVM GPU InstrProf Activated\n\n");
++        }
++    }
++    if (DeviceLoc.DataFirst) {
++        fetchData();
++    }
++}
++
++// END CUSTOM PATCHED CODE
++
+ CCL_NAMESPACE_BEGIN
+
+ /* HIPDeviceQueue */
+@@ -23,6 +145,8 @@ HIPDeviceQueue::HIPDeviceQueue(HIPDevice *device)
+
+ HIPDeviceQueue::~HIPDeviceQueue()
+ {
++  // PATCH: Try pull out our own local variable
++  __llvm_gpuprof_sync(hip_device_->hipModule);
+   const HIPContextScope scope(hip_device_);
+   hipStreamDestroy(hip_stream_);
+ }

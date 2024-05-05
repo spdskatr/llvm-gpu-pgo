@@ -1,0 +1,12 @@
+--- AMDGPUISelLowering.cpp.original	2024-05-05 11:35:48.765666891 +0100
++++ llvm17/llvm-project-llvmorg-17.0.0/llvm/lib/Target/AMDGPU/AMDGPUISelLowering.cpp	2024-05-04 22:49:49.883946227 +0100
+@@ -532,6 +532,9 @@
+
+   // memcpy/memmove/memset are expanded in the IR, so we shouldn't need to worry
+   // about these during lowering.
++  MaxStoresPerMemcpyOptSize  = 0xffffffff;
++  MaxStoresPerMemmoveOptSize = 0xffffffff;
++  MaxStoresPerMemsetOptSize  = 0xffffffff;
+   MaxStoresPerMemcpy  = 0xffffffff;
+   MaxStoresPerMemmove = 0xffffffff;
+   MaxStoresPerMemset  = 0xffffffff;

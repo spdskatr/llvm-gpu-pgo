@@ -1,0 +1,12 @@
+--- a/intern/cycles/device/CMakeLists.txt
++++ b/intern/cycles/device/CMakeLists.txt
+@@ -221,6 +221,9 @@ if(WITH_CYCLES_DEVICE_ONEAPI)
+   add_dependencies(cycles_device cycles_kernel_oneapi)
+ endif()
+
++# Also add Clang compiler-rt (for compiling with instrumentation)
++target_link_libraries(cycles_device /home/ts862/llvm17/build/lib/clang/17/lib/x86_64-unknown-linux-gnu/libclang_rt.profile.a)
++
+ source_group("cpu" FILES ${SRC_CPU})
+ source_group("cuda" FILES ${SRC_CUDA})
+ source_group("dummy" FILES ${SRC_DUMMY})

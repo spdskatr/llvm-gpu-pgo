@@ -1,0 +1,9 @@
+--- AMDGPUAsmBackend.cpp.original	2024-05-05 11:48:18.245680448 +0100
++++ llvm17/llvm-project-llvmorg-17.0.0/llvm/lib/Target/AMDGPU/MCTargetDesc/AMDGPUAsmBackend.cpp	2024-04-07 05:38:48.336350259 +0100
+@@ -169,6 +169,7 @@
+   .Case(#Name, MCFixupKind(FirstLiteralRelocationKind + Value))
+ #include "llvm/BinaryFormat/ELFRelocs/AMDGPU.def"
+ #undef ELF_RELOC
++      .Case("BFD_RELOC_NONE", MCFixupKind(FirstLiteralRelocationKind + ELF::R_AMDGPU_NONE))
+       .Default(std::nullopt);
+ }
