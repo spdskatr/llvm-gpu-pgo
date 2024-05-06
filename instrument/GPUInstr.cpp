@@ -7,6 +7,7 @@
 #include <llvm/IR/Intrinsics.h>
 #include <llvm/Pass.h>
 #include <llvm/ProfileData/InstrProf.h>
+#include <llvm/Support/CommandLine.h>
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/Support/VirtualFileSystem.h>
 #include <llvm/Transforms/Instrumentation/PGOInstrumentation.h>
@@ -28,6 +29,8 @@
 #include "Passes.h"
 
 using namespace llvm;
+
+static cl::opt<bool> DisableWarpBalloting{"no-warp-ballot", cl::init(false), cl::Hidden, cl::desc("Disable the warp balloting transfomation")};
 
 PreservedAnalyses GPUInstrPass::run(Module &M, ModuleAnalysisManager &AM) {
     // Only run PGO instrumentation if the target is GPU
@@ -65,8 +68,10 @@ PreservedAnalyses GPUInstrPass::run(Module &M, ModuleAnalysisManager &AM) {
             // Insert intrinsics
             // NOTE: LLVM was modified to change bitcasts to addrspace casts
             MPM.addPass(PGOInstrumentationGen{});
-            // Make increments more efficient
-            MPM.addPass(createModuleToFunctionPassAdaptor(IncrementToWarpBallotPass{}));
+            if (!DisableWarpBalloting) {
+                // Make increments more efficient
+                MPM.addPass(createModuleToFunctionPassAdaptor(IncrementToWarpBallotPass{}));
+            }
             // Simplify CFG from generated unconditional branches
             MPM.addPass(createModuleToFunctionPassAdaptor(SimplifyCFGPass{}));
             // Deactivate the LLVM 17 bug
