@@ -25,7 +25,7 @@ class GPUInstrPass : public llvm::PassInfoMixin<GPUInstrPass> {
   std::string UseProfilePath;
 
 public:
-  GPUInstrPass(std::string UseProfilePath) : UseProfilePath(UseProfilePath) {}
+  GPUInstrPass(std::string UseProfilePath = "") : UseProfilePath(UseProfilePath) {}
   llvm::PreservedAnalyses run(llvm::Module &M, llvm::ModuleAnalysisManager &AM);
 };
 
