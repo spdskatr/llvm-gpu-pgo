@@ -3,9 +3,9 @@
 #include <stdlib.h>
 #define __HIP_PLATFORM_AMD__
 #include "RTLib.h"
-#include "hip/driver_types.h"
 #include "hip/hip_runtime.h"
 #include "hip/hip_runtime_api.h"
+#include "hip/driver_types.h"
 #include <assert.h>
 #include <stdint.h>
 
