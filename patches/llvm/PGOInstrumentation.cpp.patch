@@ -1,11 +1,11 @@
 --- PGOInstrumentation.cpp.original	2024-01-31 22:19:09.251076300 +0000
-+++ llvm17/llvm-project-llvmorg-17.0.0/llvm/lib/Transforms/Instrumentation/PGOInstrumentation.cpp	2024-05-01 12:08:29.403308725 +0100
++++ llvm17/llvm-project-llvmorg-17.0.0/llvm/lib/Transforms/Instrumentation/PGOInstrumentation.cpp	2024-05-09 19:35:28.454085560 +0100
 @@ -875,12 +875,12 @@
        PGOBlockCoverage);
 
    Type *I8PtrTy = Type::getInt8PtrTy(M->getContext());
 -  auto Name = ConstantExpr::getBitCast(FuncInfo.FuncNameVar, I8PtrTy);
-+  auto Name = ConstantExpr::getAddrSpaceCast(FuncInfo.FuncNameVar, I8PtrTy);
++  auto Name = ConstantExpr::getPointerCast(FuncInfo.FuncNameVar, I8PtrTy);
    auto CFGHash = ConstantInt::get(Type::getInt64Ty(M->getContext()),
                                    FuncInfo.FunctionHash);
    if (PGOFunctionEntryCoverage) {
@@ -38,7 +38,7 @@
        Builder.CreateCall(
            Intrinsic::getDeclaration(M, Intrinsic::instrprof_value_profile),
 -          {ConstantExpr::getBitCast(FuncInfo.FuncNameVar, I8PtrTy),
-+          {ConstantExpr::getAddrSpaceCast(FuncInfo.FuncNameVar, I8PtrTy),
++          {ConstantExpr::getPointerCast(FuncInfo.FuncNameVar, I8PtrTy),
             Builder.getInt64(FuncInfo.FunctionHash), ToProfile,
             Builder.getInt32(Kind), Builder.getInt32(SiteIndex++)},
            OpBundles);
@@ -47,8 +47,7 @@
    Builder.CreateCall(
        Intrinsic::getDeclaration(M, Intrinsic::instrprof_increment_step),
 -      {ConstantExpr::getBitCast(FuncNameVar, I8PtrTy),
-+      {ConstantExpr::getAddrSpaceCast(FuncNameVar, I8PtrTy),
++      {ConstantExpr::getPointerCast(FuncNameVar, I8PtrTy),
         Builder.getInt64(FuncHash), Builder.getInt32(TotalNumCtrs),
         Builder.getInt32(*CurCtrIdx), Step});
    ++(*CurCtrIdx);
-   
