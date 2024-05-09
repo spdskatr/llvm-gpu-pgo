@@ -18,10 +18,10 @@ typedef struct __llvm_profile_data {
 } __llvm_profile_data;
 
 typedef struct {
-    __llvm_profile_data *DataFirst;
-    __llvm_profile_data *DataLast;
-    char *NamesFirst;
-    char *NamesLast;
-    char *CountersFirst;
-    char *CountersLast;
+  __llvm_profile_data *DataFirst;
+  __llvm_profile_data *DataLast;
+  char *NamesFirst;
+  char *NamesLast;
+  char *CountersFirst;
+  char *CountersLast;
 } ProfDataLocs;

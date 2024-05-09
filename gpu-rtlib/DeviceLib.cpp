@@ -23,21 +23,13 @@ extern __device__ char PROF_CNTS_STOP;
 
 // This symbol gets registered by GPURTLibInteropPass and then copied back to
 // the CPU.
-__device__ ProfDataLocs Loc = {
-    &PROF_DATA_START,
-    &PROF_DATA_STOP,
-    &PROF_NAME_START,
-    &PROF_NAME_STOP,
-    &PROF_CNTS_START,
-    &PROF_CNTS_STOP
-};
+__device__ ProfDataLocs Loc = {&PROF_DATA_START, &PROF_DATA_STOP,
+                               &PROF_NAME_START, &PROF_NAME_STOP,
+                               &PROF_CNTS_START, &PROF_CNTS_STOP};
 
 // We no longer need these - keep them in as a stub.
 // These will get optimised out when linked with the device code.
-extern "C"
-__device__ void __llvm_profile_register_function(void *Data_) {
-}
+extern "C" __device__ void __llvm_profile_register_function(void *Data_) {}
 
-extern "C"
-__device__ void __llvm_profile_register_names_function(void *NamesStart_, uint64_t NamesSize) {
-}
+extern "C" __device__ void
+__llvm_profile_register_names_function(void *NamesStart_, uint64_t NamesSize) {}
