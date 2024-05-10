@@ -39,6 +39,10 @@ llvmGetPassPluginInfo() {
                     MPM.addPass(GPUInstrPass{UseProfilePath});
                     return true;
                   }
+                  if (Name == "instr-augment-host") {
+                    MPM.addPass(GPURTLibInteropPass{});
+                    return true;
+                  }
                   return false;
                 });
 
